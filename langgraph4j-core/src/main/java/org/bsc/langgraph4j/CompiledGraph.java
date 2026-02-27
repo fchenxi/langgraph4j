@@ -757,9 +757,8 @@ public final class CompiledGraph<State extends AgentState> implements GraphDefin
 
                     return Data.composeWith( generator, data -> {
 
-                        if (data != null) {
-
-                            final var result = GraphResult.from(data);
+                        final var result = GraphResult.from(data);
+                        if (!result.isEmpty()) {
 
                             if( result.isInterruptionMetadata()  ) {
                                 context.setReturnFromEmbedWithValue( result );
@@ -787,10 +786,7 @@ public final class CompiledGraph<State extends AgentState> implements GraphDefin
                             }
                         }
 
-                        var nextNodeCommand = nextNodeId(context.currentNodeId(), context.currentState(), config) ;
-                        context.setNextNodeId(nextNodeCommand.gotoNode());
-                        context.setCurrentState( nextNodeCommand.update() );
-                        context.setReturnFromEmbedWithValue( GraphResult.empty() );
+                        context.setReturnFromEmbedWithValue( GraphResult.from(Map.of()) );
                     });
                 });
         }
