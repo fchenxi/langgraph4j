@@ -1,6 +1,7 @@
 package org.bsc.langgraph4j.hook;
 
 import org.bsc.async.AsyncGenerator;
+import org.bsc.async.AsyncGeneratorQueue;
 import org.bsc.langgraph4j.*;
 import org.bsc.langgraph4j.action.AsyncNodeActionWithConfig;
 import org.bsc.langgraph4j.state.AgentState;
@@ -8,14 +9,19 @@ import org.bsc.langgraph4j.state.Channel;
 import org.bsc.langgraph4j.state.Channels;
 import org.bsc.langgraph4j.streaming.StreamingOutput;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiFunction;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.bsc.langgraph4j.StateGraph.END;
@@ -34,6 +40,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 public class Issue336Test implements LG4JLoggable {
 
+
     static class State extends AgentState {
 
         public State(Map<String, Object> initData) {
@@ -46,6 +53,17 @@ public class Issue336Test implements LG4JLoggable {
 
         Optional<String> auditHook() {
             return value("AuditHook" );
+        }
+    }
+
+    public enum StreamNodeEnum {
+        SYNC(Issue336Test::createSyncStreamingNode),
+        ASYNC(Issue336Test::createAsyncStreamingNode);
+
+        final BiFunction<String, List<String>, AsyncNodeActionWithConfig<State>> actionFactory;
+
+        StreamNodeEnum(BiFunction<String, List<String>, AsyncNodeActionWithConfig<State>> actionFactory) {
+            this.actionFactory = actionFactory;
         }
     }
 
@@ -74,11 +92,34 @@ public class Issue336Test implements LG4JLoggable {
 
     }
 
+    private static AsyncNodeActionWithConfig<State> createAsyncStreamingNode(String nodeId, List<String> tokens) {
+        return (state, config) -> {
+            BlockingQueue<AsyncGenerator.Data<StreamingOutput<State>>> queue = new LinkedBlockingQueue<>();
+
+            // Start streaming in a separate thread
+            CompletableFuture.runAsync(() -> {
+                try {
+                    for (String token : tokens) {
+                        queue.add(AsyncGenerator.Data.of(new StreamingOutput<>(token, nodeId, state)));
+                        Thread.sleep(10);
+                    }
+                    // Send completion with final result
+                    queue.add(AsyncGenerator.Data.done(Map.of("VALUE", "streaming_completed")));
+                } catch (InterruptedException e) {
+                    queue.add(AsyncGenerator.Data.error(e));
+                }
+            });
+
+            var generator = new AsyncGeneratorQueue.Generator<>(queue);
+            return completedFuture(Map.of("content", generator));
+        };
+    }
+
     /**
      * Creates a streaming node using AsyncGeneratorQueue.Generator.
      * Simulates LLM streaming by pushing tokens to a queue.
      */
-    private AsyncNodeActionWithConfig<State> createStreamingNode(String nodeId, List<String> tokens) {
+    private static AsyncNodeActionWithConfig<State> createSyncStreamingNode(String nodeId, List<String> tokens) {
         return (state, config) -> {
 
             final var iterator = tokens.iterator();
@@ -130,15 +171,16 @@ public class Issue336Test implements LG4JLoggable {
         assertEquals("test_value", auditHook.capturedResult.get().get("VALUE"));
     }
 
-    @Test
-    public void testStreamingNodeAfterHookCalledAfterCompletion() throws Exception {
+    @ParameterizedTest
+    @EnumSource( StreamNodeEnum.class )
+    public void testStreamingNodeAfterHookCalledAfterCompletion( StreamNodeEnum streamNodeEnum ) throws Exception {
         // Given
         Map<String, Channel<?>> schema = Map.of("VALUE", Channels.appender(ArrayList::new));
         var auditHook = new AuditHook<State>();
 
         var workflow = new StateGraph<>(schema, State::new)
                 .addAfterCallNodeHook(auditHook)
-                .addNode("streaming_node", createStreamingNode("streaming_node", List.of("Hello", " ", "World")))
+                .addNode("streaming_node", streamNodeEnum.actionFactory.apply("streaming_node", List.of("Hello", " ", "World")))
                 .addEdge(START, "streaming_node")
                 .addEdge("streaming_node", END)
                 .compile();
@@ -178,8 +220,9 @@ public class Issue336Test implements LG4JLoggable {
         assertEquals("streaming_completed", capturedValue);
     }
 
-    @Test
-    public void testMixedBlockingAndStreamingNodes() throws Exception {
+    @ParameterizedTest
+    @EnumSource( StreamNodeEnum.class )
+    public void testMixedBlockingAndStreamingNodes( StreamNodeEnum streamNodeEnum ) throws Exception {
         // Given
         Map<String, Channel<?>> schema = Map.of("VALUE", Channels.appender(ArrayList::new));
         var auditHook = new AuditHook<State>();
@@ -187,7 +230,7 @@ public class Issue336Test implements LG4JLoggable {
         var workflow = new StateGraph<>(schema, State::new)
                 .addAfterCallNodeHook(auditHook)
                 .addNode("blocking_node", createBlockingNode("blocking_result"))
-                .addNode("streaming_node", createStreamingNode("streaming_node", List.of("A", "B", "C")))
+                .addNode("streaming_node", streamNodeEnum.actionFactory.apply("streaming_node", List.of("A", "B", "C")))
                 .addEdge(START, "blocking_node")
                 .addEdge("blocking_node", "streaming_node")
                 .addEdge("streaming_node", END)
