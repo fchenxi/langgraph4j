@@ -5,6 +5,7 @@ import dev.langchain4j.data.message.SystemMessage;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.chat.request.ResponseFormat;
+import org.bsc.langgraph4j.langchain4j.generators.StreamingChatGenerator;
 import org.bsc.langgraph4j.langchain4j.tool.LC4jToolMapBuilder;
 import org.bsc.langgraph4j.prebuilt.MessagesState;
 import org.bsc.langgraph4j.serializer.StateSerializer;
@@ -17,6 +18,7 @@ public abstract class AgentExecutorBuilder<State extends MessagesState<ChatMessa
     SystemMessage systemMessage;
     ResponseFormat responseFormat;
     ConversationContextPolicy conversationContextPolicy;
+    boolean emitStreamingOutputEnd;
 
     @SuppressWarnings("unchecked")
     protected B result() {
@@ -35,9 +37,17 @@ public abstract class AgentExecutorBuilder<State extends MessagesState<ChatMessa
         return result();
     }
 
-    public B chatModel(StreamingChatModel streamingChatModel ) {
+    public B chatModel( StreamingChatModel streamingChatModel ) {
         if( this.streamingChatModel == null ) {
             this.streamingChatModel = streamingChatModel;
+            this.emitStreamingOutputEnd = false;
+        }
+        return result();
+    }
+    public B chatModel( StreamingChatModel streamingChatModel, boolean emitStreamingOutputEnd ) {
+        if( this.streamingChatModel == null ) {
+            this.streamingChatModel = streamingChatModel;
+            this.emitStreamingOutputEnd = emitStreamingOutputEnd;
         }
         return result();
     }

@@ -29,6 +29,7 @@ public class CallModel<State extends MessagesState<ChatMessage>> implements Asyn
     private final SystemMessage systemMessage;
     private final ConversationContextPolicy conversationContextPolicy;
     final ChatRequestParameters parameters;
+    final boolean emitStreamingOutputEnd;
 
     /**
      * Constructs a CallAgent with the specified agent.
@@ -40,6 +41,7 @@ public class CallModel<State extends MessagesState<ChatMessage>> implements Asyn
         this.streamingChatModel = builder.streamingChatModel;
         this.systemMessage = ofNullable( builder.systemMessage ).orElseGet( () -> SystemMessage.from("You are a helpful assistant") );
         this.conversationContextPolicy = builder.conversationContextPolicy;
+        this.emitStreamingOutputEnd = builder.emitStreamingOutputEnd;
 
         var parametersBuilder = ChatRequestParameters.builder()
                 .toolSpecifications( builder.toolMap().keySet().stream().toList() );
@@ -122,6 +124,7 @@ public class CallModel<State extends MessagesState<ChatMessage>> implements Asyn
         if( isStreaming() && !config.isRunningInStudio() ) {
 
             var generator = StreamingChatGenerator.<State>builder()
+                    .emitStreamingOutputEnd(emitStreamingOutputEnd)
                     .mapResult( this::mapResult )
                     .startingNode("agent")
                     .startingState( state )

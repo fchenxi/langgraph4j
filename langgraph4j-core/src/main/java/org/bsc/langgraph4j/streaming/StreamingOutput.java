@@ -17,12 +17,16 @@ public class StreamingOutput<State extends AgentState> extends NodeOutput<State>
         return chunk;
     }
 
+    public boolean isEnd() {
+        return false;
+    }
+
     @Override
     public String toString() {
         if( node() == null ) {
-            return "StreamingOutput{chunk=%s}".formatted( chunk());
+            return "%s{chunk=%s}".formatted( getClass().getSimpleName(), chunk());
         }
-        return "StreamingOutput{node=%s, chunk=%s, state=%s, }".formatted( node(), chunk(), state() );
+        return "%s{node=%s, chunk=%s, state=%s }".formatted( getClass().getSimpleName(),node(), chunk(), state() );
     }
 
 }
