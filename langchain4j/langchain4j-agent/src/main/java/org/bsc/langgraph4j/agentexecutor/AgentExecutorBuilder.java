@@ -5,7 +5,7 @@ import dev.langchain4j.data.message.SystemMessage;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.chat.request.ResponseFormat;
-import org.bsc.langgraph4j.langchain4j.generators.StreamingChatGenerator;
+import org.bsc.langgraph4j.agent.ConversationContextPolicy;
 import org.bsc.langgraph4j.langchain4j.tool.LC4jToolMapBuilder;
 import org.bsc.langgraph4j.prebuilt.MessagesState;
 import org.bsc.langgraph4j.serializer.StateSerializer;
