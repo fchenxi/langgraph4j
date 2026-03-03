@@ -6,10 +6,13 @@ import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.SystemMessage;
 import dev.langchain4j.data.message.ToolExecutionResultMessage;
 import dev.langchain4j.data.message.UserMessage;
+import org.bsc.langgraph4j.RunnableConfig;
+import org.bsc.langgraph4j.prebuilt.MessagesState;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -18,6 +21,9 @@ class MessageWindowConversationContextPolicyTest {
 
     @Test
     void shouldKeepMostRecentMessagesWithinWindow() {
+
+        final var config = RunnableConfig.builder().build();
+
         var strategy = new MessageWindowConversationContextPolicy(3);
         List<ChatMessage> messages = List.of(
                 UserMessage.from("m1"),
@@ -27,7 +33,9 @@ class MessageWindowConversationContextPolicyTest {
                 UserMessage.from("m5")
         );
 
-        var filtered = strategy.filter(messages);
+        final var state = new MessagesState<ChatMessage>(Map.of(MessagesState.MESSAGES_STATE, messages));
+
+        var filtered = strategy.filter(state, config);
 
         assertEquals(3, filtered.size());
         assertEquals("m3", ((UserMessage) filtered.get(0)).singleText());
@@ -37,6 +45,8 @@ class MessageWindowConversationContextPolicyTest {
 
     @Test
     void shouldPreserveLeadingSystemMessageWhenEvicting() {
+        final var config = RunnableConfig.builder().build();
+
         var strategy = new MessageWindowConversationContextPolicy(2);
         var messages = List.of(
                 SystemMessage.from("system"),
@@ -44,8 +54,9 @@ class MessageWindowConversationContextPolicyTest {
                 UserMessage.from("m2"),
                 UserMessage.from("m3")
         );
+        final var state = new MessagesState<ChatMessage>(Map.of(MessagesState.MESSAGES_STATE, messages));
 
-        var filtered = strategy.filter(messages);
+        var filtered = strategy.filter(state, config);
 
         assertEquals(2, filtered.size());
         assertEquals(SystemMessage.class, filtered.get(0).getClass());
@@ -54,6 +65,8 @@ class MessageWindowConversationContextPolicyTest {
 
     @Test
     void shouldRemoveOrphanToolResultsWhenEvictingAiToolRequest() {
+        final var config = RunnableConfig.builder().build();
+
         var strategy = new MessageWindowConversationContextPolicy(1);
         var toolRequest = ToolExecutionRequest.builder()
                 .id("id-1")
@@ -66,8 +79,9 @@ class MessageWindowConversationContextPolicyTest {
                 ToolExecutionResultMessage.from(toolRequest, "done"),
                 UserMessage.from("latest")
         );
+        final var state = new MessagesState<ChatMessage>(Map.of(MessagesState.MESSAGES_STATE, messages));
 
-        var filtered = strategy.filter(messages);
+        var filtered = strategy.filter(state, config);
 
         assertEquals(1, filtered.size());
         assertEquals(UserMessage.class, filtered.get(0).getClass());
@@ -76,14 +90,17 @@ class MessageWindowConversationContextPolicyTest {
 
     @Test
     void shouldNotMutateInputMessages() {
+        final var config = RunnableConfig.builder().build();
+
         var strategy = new MessageWindowConversationContextPolicy(2);
         List<ChatMessage> original = new ArrayList<>(List.of(
                 UserMessage.from("m1"),
                 UserMessage.from("m2"),
                 UserMessage.from("m3")
         ));
+        final var state = new MessagesState<ChatMessage>(Map.of(MessagesState.MESSAGES_STATE, original));
 
-        strategy.filter(original);
+        strategy.filter(state, config);
 
         assertEquals(3, original.size());
         assertEquals("m1", ((UserMessage) original.get(0)).singleText());
