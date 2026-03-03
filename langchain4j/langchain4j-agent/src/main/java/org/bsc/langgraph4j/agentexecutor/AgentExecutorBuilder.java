@@ -17,6 +17,7 @@ public abstract class AgentExecutorBuilder<State extends MessagesState<ChatMessa
     StreamingChatModel streamingChatModel;
     SystemMessage systemMessage;
     ResponseFormat responseFormat;
+    ConversationContextPolicy conversationContextPolicy;
     boolean emitStreamingOutputEnd;
 
     @SuppressWarnings("unchecked")
@@ -60,6 +61,11 @@ public abstract class AgentExecutorBuilder<State extends MessagesState<ChatMessa
 
     public B responseFormat(ResponseFormat responseFormat ) {
         this.responseFormat = responseFormat;
+        return result();
+    }
+
+    public B conversationContextPolicy(ConversationContextPolicy conversationContextPolicy) {
+        this.conversationContextPolicy = conversationContextPolicy;
         return result();
     }
 
