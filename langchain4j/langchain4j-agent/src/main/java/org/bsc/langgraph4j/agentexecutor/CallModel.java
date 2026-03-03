@@ -10,6 +10,7 @@ import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.output.FinishReason;
 import org.bsc.langgraph4j.RunnableConfig;
 import org.bsc.langgraph4j.action.AsyncNodeActionWithConfig;
+import org.bsc.langgraph4j.agent.ConversationContextPolicy;
 import org.bsc.langgraph4j.langchain4j.generators.StreamingChatGenerator;
 import org.bsc.langgraph4j.prebuilt.MessagesState;
 
@@ -27,7 +28,7 @@ public class CallModel<State extends MessagesState<ChatMessage>> implements Asyn
     private final ChatModel chatModel;
     private final StreamingChatModel streamingChatModel;
     private final SystemMessage systemMessage;
-    private final ConversationContextPolicy conversationContextPolicy;
+    private final ConversationContextPolicy<ChatMessage> conversationContextPolicy;
     final ChatRequestParameters parameters;
     final boolean emitStreamingOutputEnd;
 
@@ -114,7 +115,7 @@ public class CallModel<State extends MessagesState<ChatMessage>> implements Asyn
         }
 
         var messages = (conversationContextPolicy != null) ?
-                conversationContextPolicy.filter( List.copyOf(graphMessages) ) :
+                conversationContextPolicy.filter( state, config ) :
                 graphMessages;
 
         if (messages == null) {
