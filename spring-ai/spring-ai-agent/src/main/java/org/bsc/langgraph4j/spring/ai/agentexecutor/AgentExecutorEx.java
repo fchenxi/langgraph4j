@@ -149,12 +149,10 @@ public interface AgentExecutorEx extends LG4JLoggable {
          */
         public StateGraph<State> build(Function<ReactAgentBuilder<?, ?>, org.bsc.langgraph4j.spring.ai.agent.ReactAgent.ChatService> chatServiceFactory ) throws GraphStateException {
 
-            final var chatService = requireNonNull(chatServiceFactory, "chatServiceFactory cannot be null!").apply(this);
-
             // verify approval
             final var toolService = new SpringAIToolService(tools());
 
-            final var callModelAction = new CallModelAction<State>( chatService, streaming, emitStreamingOutputEnd );
+            final var callModelAction = new CallModelAction<State>( chatServiceFactory, this );
 
             return agentBuilder
                     .stateSerializer( ofNullable(stateSerializer)
