@@ -108,18 +108,13 @@ public class CallModel<State extends MessagesState<ChatMessage>> implements Asyn
      */
     public Map<String,Object> applySync(State state, RunnableConfig config)  {
         log.trace( "callAgent" );
-        var graphMessages = state.messages();
 
-        if( graphMessages.isEmpty() ) {
+        final var messages = ofNullable(conversationContextPolicy)
+                .map( policy -> policy.filter(state, config) )
+                .orElseGet(state::messages);
+
+        if( messages == null || messages.isEmpty() ) {
             throw new IllegalArgumentException("no input provided!");
-        }
-
-        var messages = (conversationContextPolicy != null) ?
-                conversationContextPolicy.filter( state, config ) :
-                graphMessages;
-
-        if (messages == null) {
-            throw new IllegalStateException("conversationContextPolicy returned null messages");
         }
 
         if( isStreaming() && !config.isRunningInStudio() ) {
