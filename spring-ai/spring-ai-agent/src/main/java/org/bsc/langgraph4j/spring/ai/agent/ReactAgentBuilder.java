@@ -2,6 +2,7 @@ package org.bsc.langgraph4j.spring.ai.agent;
 
 import org.bsc.langgraph4j.GraphStateException;
 import org.bsc.langgraph4j.StateGraph;
+import org.bsc.langgraph4j.agent.ConversationContextPolicy;
 import org.bsc.langgraph4j.prebuilt.MessagesState;
 import org.bsc.langgraph4j.serializer.StateSerializer;
 import org.bsc.langgraph4j.state.Channel;
@@ -31,6 +32,7 @@ public abstract class ReactAgentBuilder<B extends ReactAgentBuilder<B,State>, St
     private SkillsTool.Builder skillsBuilder;
     protected Map<String, Channel<?>> schema = MessagesState.SCHEMA;
     protected boolean emitStreamingOutputEnd;
+    protected ConversationContextPolicy<Message> conversationContextPolicy;
 
     public Optional<String> systemMessage() {
         return ofNullable(systemMessage);
@@ -46,6 +48,10 @@ public abstract class ReactAgentBuilder<B extends ReactAgentBuilder<B,State>, St
     }
 
 
+    public B conversationContextPolicy( ConversationContextPolicy<Message> conversationContextPolicy ) {
+        this.conversationContextPolicy = conversationContextPolicy;
+        return result();
+    }
 
     public B schema(Map<String, Channel<?>> schema) {
         this.schema = schema;
