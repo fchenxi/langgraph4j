@@ -2,6 +2,136 @@
 
 
 
+<!-- "name: v1.8.6" is a release tag -->
+
+## [v1.8.6](https://github.com/bsorrentino/langgraph4j/releases/tag/v1.8.6) (2026-03-04)
+
+### Features
+
+ *  **spring-ai-agent/ReactAgentBuilder**  Add support for ConversationContextPolicy ([00ca3b7e3e6ff67](https://github.com/bsorrentino/langgraph4j/commit/00ca3b7e3e6ff678b92dc0eea70b9632c68f6d01))
+     > working on #339
+   
+ *  **NodeHooks.java**  Add support for interruptible actions and streaming nodes ([2a5bbc4be800fb6](https://github.com/bsorrentino/langgraph4j/commit/2a5bbc4be800fb64aad3d923053722b0e1ea0783))
+     > This enhancement enables the system to properly handle asynchronous interruptions and streaming operations in node execution.
+     > working on #342
+   
+ *  **AssistantMessageHandler**  Add serialization support for AssistantMessage.ToolCall objects ([76ef0ac26fcdbb2](https://github.com/bsorrentino/langgraph4j/commit/76ef0ac26fcdbb2360ec28894691ad94fe6f3b99))
+     > working on #341
+   
+ *  **LangGraphStudioServer**  Add CORS headers for integration tests ([50d4fb2e83dc6a6](https://github.com/bsorrentino/langgraph4j/commit/50d4fb2e83dc6a6d10692c5b0dfc9902c45b4363))
+     > working on #341
+   
+ *  **SpringAIJacksonStateSerializer**  add support for AssistantMessage.ToolCall serialization ([ee1a2403fb99b1c](https://github.com/bsorrentino/langgraph4j/commit/ee1a2403fb99b1c4eb812bb999e0f7fd8478b5e4))
+     > working on #341
+   
+ *  **core/ConversationContextPolicy**  promote such interface to core package ([a5c2e92690a01dd](https://github.com/bsorrentino/langgraph4j/commit/a5c2e92690a01dd568d67d71069726bd8a7c7625))
+     > working on #339
+   
+ *  **core/ConversationContextPolicy**  Add interface for filtering messages before LLM call. ([e6fdd3d7092a48f](https://github.com/bsorrentino/langgraph4j/commit/e6fdd3d7092a48f0b5195cf22c77114ed987477d))
+     > promote  such interface to core package
+     > working on #339
+   
+
+### Bug Fixes
+
+ -  **studio/webui**  correct context path handling and include credentials in fetch requests ([f9ea91aae81a722](https://github.com/bsorrentino/langgraph4j/commit/f9ea91aae81a72257f6bbec819186148f26fdedd))
+     > The changes address:
+     > 1. Fixed context path calculation by using url.toString() instead of url.pathname to handle query parameters
+     > 2. Added credentials: &#x27;include&#x27; to all fetch requests to properly handle authentication
+     > working on #341
+
+
+### Refactor
+
+ -  **pring-ai-agent/AgentExecutorEx**  Update CallModelAction initialization to use chatServiceFactory and Builder ([0f252f38357785d](https://github.com/bsorrentino/langgraph4j/commit/0f252f38357785df3a95769377c6b7955c4a3fa4))
+    > working on #339
+
+ -  **spring-ai-agent/CallModelAction**  integrate conversation context policy ([f01a59784690050](https://github.com/bsorrentino/langgraph4j/commit/f01a59784690050dcd3bc75a1988b2120135fdba))
+    > working on #339
+
+ -  **langchain4j-agent/CallModel**  refactor message handling to use conversation context policy and improve null checks ([ceeb930ba27700c](https://github.com/bsorrentino/langgraph4j/commit/ceeb930ba27700cfc05ad9b83a8932e8e49d803e))
+    > working on #339
+
+ -  **langchain4j/AgentExecutorBuilder**  specify ChatMessage type for ConversationContextPolicy ([092d9a4b0ad66c5](https://github.com/bsorrentino/langgraph4j/commit/092d9a4b0ad66c5ff30a13b8afeb38d1b2b9a7c8))
+    > working on #339
+
+ -  **spring-ai-agent/ReactAgent**  streamline callModelAction initialization passing the agent builder as argument ([239fa13bca6047e](https://github.com/bsorrentino/langgraph4j/commit/239fa13bca6047ebfb7a375dbf92f1164200c721))
+    > working on #339
+
+ -  **NodeHooks**  Refactor Result class and method parameters for validation and streaming handling ([3acf835056cea22](https://github.com/bsorrentino/langgraph4j/commit/3acf835056cea22d113c8e7111fe7f22023d4816))
+    > Adds validation to ensure either partialState or interruptionMetadata is provided but not both
+ > working on #342
+
+ -  **CompiledGraph**  refactor interruption handling logic and integrate interrupt metadata into CompletableFuture chain ([6507a4a4e8dc567](https://github.com/bsorrentino/langgraph4j/commit/6507a4a4e8dc5678db31169e3a571b8fe113fe4e))
+    > The method now uses applyActionWithHooksHandlingInterruption instead of the previous method.
+ > Key changes include:
+ > - Moving interrupt metadata handling from separate checks to the main flow
+ > working on #342
+
+ -  **spring-ai-agent/AgentExecutorEx**  Replace state serializer with Jackson-based version ([ba9ba5728de2a3b](https://github.com/bsorrentino/langgraph4j/commit/ba9ba5728de2a3b203ce75544f1a8d3d9204f8e5))
+    > working on #341
+
+ -  **core/AgentEx.java**  add an empty APPROVAL_RESULT_PROPERTY to state to enable studio to manage approval workflow ([cb7101843b93505](https://github.com/bsorrentino/langgraph4j/commit/cb7101843b935057b5b82471d2c9d799f4cf3ad6))
+    > working on #341
+
+ -  **AgentExecutor.java**  set SpringAIJacksonStateSerializer as default serializer ([a390f20e77eaa37](https://github.com/bsorrentino/langgraph4j/commit/a390f20e77eaa373d7db5b096cb6334033167cf5))
+    > working on #341
+
+ -  **langchain4j/MessageWindowConversationContextPolicyTest**  refactor test methods to use new state and config parameters ([f5d7d1b2b4298cf](https://github.com/bsorrentino/langgraph4j/commit/f5d7d1b2b4298cf2c9f1465983f2c8c2dda48bc7))
+    > working on #339
+
+ -  **langchain4j/CallModel**  update ConversationContextPolicy to use generics and state/config parameters ([e63bb0000a688f0](https://github.com/bsorrentino/langgraph4j/commit/e63bb0000a688f0b734bca09425a72c559752d1d))
+    > working on #339
+
+ -  **langchain4j/MessageWindowConversationContextPolicy**  make ConversationContextPolicy generic over ChatMessage and update filter method parameters ([86e44efb65ad86b](https://github.com/bsorrentino/langgraph4j/commit/86e44efb65ad86b3061cea15d727afe7ed6bd559))
+    > working on #339
+
+ -  **langchain4j/AgentExecutorBuilder**  add support for ConversationContextPolicy ([c8ecb038dd013eb](https://github.com/bsorrentino/langgraph4j/commit/c8ecb038dd013eb542c17e094961cc890398279c))
+    > working on #339
+
+ -  **spring-ai/agent**  update method signatures and deprecate combined chatModel configuration ([af7a66866fba6c2](https://github.com/bsorrentino/langgraph4j/commit/af7a66866fba6c2500307b0c6217f0307125bd00))
+    > add explicity methods for streamning and emitStreamingEnd
+
+ -  **spring-ai/agent**  update method signatures and deprecate combined chatModel configuration ([8fc981544de2977](https://github.com/bsorrentino/langgraph4j/commit/8fc981544de29771b9061cdb349ab04076bff6e5))
+    > add explicity methods for streamning and emitStreamingEnd
+
+ -  **langchain4j/LLMStreamingGenerator**  Update deprecated annotation to indicate removal ([eac993e99f330bb](https://github.com/bsorrentino/langgraph4j/commit/eac993e99f330bba2f6812a9938edb62d5b1fad3))
+   
+
+### Test 
+
+ -  **spring-ai/LangGraphStudioConfiguration.java**  Add approval logic using InterruptionMetadata ([3015d36e64cf0c4](https://github.com/bsorrentino/langgraph4j/commit/3015d36e64cf0c4efbe32f25748469f70ce1b515))
+    > working on #341
+
+ -  **spring-ai/agent**  activate studio ([f86788ee556417b](https://github.com/bsorrentino/langgraph4j/commit/f86788ee556417b8a49e71b22d8c243e1f0c366e))
+   
+ -  **spring-ai/agent**  move integration test from console to spring boot test ([2d37e9600b7c47f](https://github.com/bsorrentino/langgraph4j/commit/2d37e9600b7c47f24cbff56d6bc62c4e8c8402a5))
+   
+
+### Documentation
+
+ -  bump to next version 1.8.6 ([a54fd9c5abee063](https://github.com/bsorrentino/langgraph4j/commit/a54fd9c5abee063a0de2f9cb3622802bcdda592e))
+
+ -  update changelog ([42593ddb7fea6e7](https://github.com/bsorrentino/langgraph4j/commit/42593ddb7fea6e7cdd413cfa888869a31c0aa7a0))
+
+
+### ALM 
+
+ -  **javelit**  bump to next version 1.8.6 ([96bdf2e1cb05538](https://github.com/bsorrentino/langgraph4j/commit/96bdf2e1cb0553882e0891d6c3818da7d3a42890))
+   
+ -  bump to next version 1.8.6 ([a54292599628210](https://github.com/bsorrentino/langgraph4j/commit/a5429259962821052e8944051be2e8309d90930c))
+   
+ -  **studio/webui**  deploy dist ([3c5bea356732302](https://github.com/bsorrentino/langgraph4j/commit/3c5bea356732302a2fb8dcf2cabd58f3e509804f))
+   
+ -  **spring-ai-agent**  Add maven-surefire-plugin to exclude integration tests ([aadfe2d88c51de9](https://github.com/bsorrentino/langgraph4j/commit/aadfe2d88c51de9f46e36fa5f536fc5f7587ea89))
+   
+ -  bump to nex dev version 1.8-SNAPSHOT ([8e6bce10981166f](https://github.com/bsorrentino/langgraph4j/commit/8e6bce10981166f9e92c19b4a12a1164d5cfef65))
+   
+
+
+
+
+
 <!-- "name: v1.8.5" is a release tag -->
 
 ## [v1.8.5](https://github.com/bsorrentino/langgraph4j/releases/tag/v1.8.5) (2026-03-02)
