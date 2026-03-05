@@ -22,5 +22,7 @@ git add . ; git commit -m'build: bump to next version <version>'
 At this point pause execution and ask to the user when ready to close the release, When he confirms proceed to next steps
 ## 5. close release
 To close the release runs `git flow release finish "<version>" -m"new release <version>"` that will merge the branch `release/<version>` to both `main` and `develop` ones 
+## 6. update change log
+To update change log runs the shell script `./hotfix-changelog.sh`
 
 
