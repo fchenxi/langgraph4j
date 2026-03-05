@@ -114,7 +114,7 @@ public class StreamingChatGenerator<State extends AgentState> extends AsyncGener
                         last = mergeResponses(last, current);
 
                         builder.queue.add( AsyncGenerator.Data.of(
-                                new StreamingOutput<>( textFromResponse(last).orElse(""),
+                                new StreamingOutput<>( textFromResponse(current).orElse(""),
                                         builder.startingNode,
                                         builder.startingState )));
 
