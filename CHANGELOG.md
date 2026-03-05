@@ -2,6 +2,62 @@
 
 
 
+<!-- "name: v1.8.7" is a release tag -->
+
+## [v1.8.7](https://github.com/bsorrentino/langgraph4j/releases/tag/v1.8.7) (2026-03-05)
+
+### Features
+
+ *  **AbstractMysqlServer**  add MysqlSaver abstract class allowing develop custom extensions ([2b0beab4714cf97](https://github.com/bsorrentino/langgraph4j/commit/2b0beab4714cf9777a5e711457a61ddb702ef95e))
+     > working on #348
+   
+
+### Bug Fixes
+
+ -  update StreamingChatGenerator to use current response in output ([67985454eacd664](https://github.com/bsorrentino/langgraph4j/commit/67985454eacd66478d9c9e536eaa4eb784141479))
+
+
+### Refactor
+
+ -  **MysqlSaver**  restructure class hierarchy and remove SQL-specific implementation details ([f4bf7e59801d402](https://github.com/bsorrentino/langgraph4j/commit/f4bf7e59801d40254bc2279ec3dd316c51385bca))
+    > Changing superclass from MemorySaver to AbstractMysqlServer
+ > working on #348
+
+ -  **MysqlSaver**  update SQL syntax for foreign key declaration and add id ordering in checkpoint query ([8dd004e3e42e9b2](https://github.com/bsorrentino/langgraph4j/commit/8dd004e3e42e9b2c9bafe370a09e1dcb43f101b5))
+    > Add secondary ordering by id in the checkpoint query to ensure deterministic sorting
+ > working on #347
+
+
+### Test 
+
+ -  streaming result test ([624a5d811ac075a](https://github.com/bsorrentino/langgraph4j/commit/624a5d811ac075a699ca8712c185d6673d3d0f24))
+   
+ -  **core/InterruptionTest**  Add test for streaming output handling after interruption ([cb34a3e6d541410](https://github.com/bsorrentino/langgraph4j/commit/cb34a3e6d54141090e868db0cf27e3cd733cf0da))
+    > working on #343
+
+
+### Documentation
+
+ -  bump to next version 1.8.6 ([f1786879dde64f7](https://github.com/bsorrentino/langgraph4j/commit/f1786879dde64f725d170195d66774ad24e838af))
+
+ -  **SKILL**  update "create project release" instructions ([6366c4940c697da](https://github.com/bsorrentino/langgraph4j/commit/6366c4940c697dab67920ef77dc72361f5cabf08))
+
+ -  update changelog ([0043fb63b3ea3c1](https://github.com/bsorrentino/langgraph4j/commit/0043fb63b3ea3c197ce8e97368644498a4ccbd57))
+
+
+### ALM 
+
+ -  **javelit**  bump to next version 1.8.7 ([c94da99fb696e3b](https://github.com/bsorrentino/langgraph4j/commit/c94da99fb696e3bd62adb239f22cdeaba89cae86))
+   
+ -  bump to next version 1.8.7 ([6b858039fec971e](https://github.com/bsorrentino/langgraph4j/commit/6b858039fec971ee3851c56a6cf03b251dd7d649))
+   
+ -  bump to next dev version 1.8-SNAPSHOT ([a07836bb5c79eca](https://github.com/bsorrentino/langgraph4j/commit/a07836bb5c79eca89afef0a429aa5ce23f30fb57))
+   
+
+
+
+
+
 <!-- "name: v1.8.6" is a release tag -->
 
 ## [v1.8.6](https://github.com/bsorrentino/langgraph4j/releases/tag/v1.8.6) (2026-03-04)
