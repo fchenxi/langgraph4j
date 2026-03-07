@@ -2,6 +2,7 @@ package org.bsc.langgraph4j.serializer.jackson;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.MapperFeature;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import org.bsc.langgraph4j.NodeOutput;
 import org.bsc.langgraph4j.serializer.plain_text.jackson.JacksonStateSerializer;
 import org.bsc.langgraph4j.serializer.plain_text.jackson.TypeMapper;
@@ -70,7 +71,9 @@ public class JacksonSerializerTest {
     static class MyJacksonStateSerializer extends JacksonStateSerializer<AgentState> {
 
         public MyJacksonStateSerializer() {
-            super(AgentState::new);
+            super(AgentState::new, JsonMapper.builder()
+                    .enable(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY)
+                    .build());
         }
     }
 
@@ -80,8 +83,7 @@ public class JacksonSerializerTest {
         var serializer = new MyJacksonStateSerializer();
 
         NodeOutput<AgentState> output = new NodeOutput<>("node", null);
-        var mapper = serializer.objectMapper()
-                            .configure(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY, true);
+        var mapper = serializer.objectMapper();
         var json = mapper.writeValueAsString(output);
         assertEquals("""
                 {"end":false,"node":"node","start":false,"state":null}""", json );
