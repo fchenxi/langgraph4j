@@ -27,15 +27,15 @@ public abstract class JacksonStateSerializer <State extends AgentState> extends 
 
     protected JacksonStateSerializer( AgentStateFactory<State> stateFactory ) {
         this( stateFactory, new ObjectMapper() );
-        this.objectMapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
 
     }
 
     protected JacksonStateSerializer( AgentStateFactory<State> stateFactory, ObjectMapper objectMapper) {
         super(stateFactory);
         this.objectMapper = Objects.requireNonNull(objectMapper, "objectMapper cannot be null");
+        this.objectMapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
 
-        var module = new SimpleModule();
+        final var module = new SimpleModule();
         module.addDeserializer( Map.class, new GenericMapDeserializer(typeMapper) );
         module.addDeserializer( List.class, new GenericListDeserializer(typeMapper) );
 
