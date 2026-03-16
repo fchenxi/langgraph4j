@@ -4,12 +4,14 @@ import org.bsc.langgraph4j.RunnableConfig;
 import org.bsc.langgraph4j.utils.TryFunction;
 
 import java.util.*;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.IntStream;
 
 import static java.lang.String.format;
 import static java.util.Optional.ofNullable;
 
 public abstract class AbstractCheckpointSaver implements BaseCheckpointSaver {
+    private final ReentrantLock _lock = new ReentrantLock();
 
     protected abstract LinkedList<Checkpoint> loadCheckpoints(RunnableConfig config) throws Exception;
 
@@ -19,14 +21,18 @@ public abstract class AbstractCheckpointSaver implements BaseCheckpointSaver {
 
     protected abstract Tag releaseCheckpoints(RunnableConfig config, LinkedList<Checkpoint> checkpoints ) throws Exception;
 
-    protected <T> T loadOrInitCheckpoints(RunnableConfig config,
+    private <T> T loadOrInitCheckpoints(RunnableConfig config,
                                                 TryFunction<LinkedList<Checkpoint>, T, Exception> transformer) throws Exception {
-
+        _lock.lock();
+        try {
             final var checkpoints = loadCheckpoints(config);
 
             return transformer.tryApply( checkpoints );
-    }
+        } finally {
+            _lock.unlock();
+        }
 
+    }
 
     final Optional<Checkpoint> getLast( LinkedList<Checkpoint> checkpoints, RunnableConfig config ) {
         return (checkpoints.isEmpty() ) ? Optional.empty() : ofNullable(checkpoints.peek());
