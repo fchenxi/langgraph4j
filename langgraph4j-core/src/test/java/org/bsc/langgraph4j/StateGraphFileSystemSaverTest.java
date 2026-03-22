@@ -1,12 +1,16 @@
 package org.bsc.langgraph4j;
 
 import org.bsc.async.AsyncGenerator;
-import org.bsc.langgraph4j.checkpoint.BaseCheckpointSaver;
 import org.bsc.langgraph4j.checkpoint.Checkpoint;
 import org.bsc.langgraph4j.checkpoint.FileSystemSaver;
 import org.bsc.langgraph4j.prebuilt.MessagesState;
+import org.bsc.langgraph4j.serializer.StateSerializer;
+import org.bsc.langgraph4j.serializer.plain_text.jackson.JacksonStateSerializer;
+import org.bsc.langgraph4j.serializer.std.ObjectStreamStateSerializer;
 import org.bsc.langgraph4j.state.StateSnapshot;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import java.nio.file.Paths;
 import java.util.List;
@@ -24,9 +28,8 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Unit test for simple App.
  */
-public class StateGraphFileSystemSaverTest
-{
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(StateGraphFileSystemSaverTest.class);
+public class StateGraphFileSystemSaverTest implements LG4JLoggable {
+
     static class State extends MessagesState<String> {
 
         public State(Map<String, Object> initData) {
@@ -39,15 +42,41 @@ public class StateGraphFileSystemSaverTest
 
     }
 
+    static class JsonStateSerializer extends JacksonStateSerializer<State> {
+        public JsonStateSerializer() {
+            super(State::new);
+        }
+    }
+
+    static class StdStateSerializer extends ObjectStreamStateSerializer<State> {
+        public StdStateSerializer() {
+            super(State::new);
+        }
+    }
+
+    public enum StateSerializerEnum {
+        STD( new StdStateSerializer() ),
+        JSON( new JsonStateSerializer() )
+        ;
+
+        private final StateSerializer<State> value;
+
+        StateSerializerEnum(StateSerializer<State> stateSerializer) {
+            this.value = stateSerializer;
+        }
+    }
+
+
     final String rootPath = Paths.get( "target", "checkpoint" ).toString();
 
-    @Test
-    public void testCheckpointSaverResubmit() throws Exception {
+    @ParameterizedTest
+    @EnumSource( StateSerializerEnum.class )
+    public void testCheckpointSaverResubmit( StateSerializerEnum stateSerializer ) throws Exception {
         int expectedSteps = 5;
 
         final var checkpointStore = Paths.get( rootPath, "testCheckpointSaverResubmit" );
 
-        var workflow = new StateGraph<>(State.SCHEMA, State::new)
+        var workflow = new StateGraph<>(State.SCHEMA, stateSerializer.value )
                 .addEdge(START, "agent_1")
                 .addNode("agent_1", node_async( state -> {
                     int steps = state.steps() + 1;
@@ -136,11 +165,12 @@ public class StateGraphFileSystemSaverTest
         }
     }
 
-    @Test
-    public void testCheckpointSaverWithManualRelease() throws Exception {
+    @ParameterizedTest
+    @EnumSource( StateSerializerEnum.class )
+    public void testCheckpointSaverWithManualRelease( StateSerializerEnum stateSerializer ) throws Exception {
         int expectedSteps = 5;
 
-        StateGraph<State> workflow = new StateGraph<>(State.SCHEMA, State::new)
+        var workflow = new StateGraph<>(State.SCHEMA, stateSerializer.value )
                 .addEdge(START, "agent_1")
                 .addNode("agent_1", node_async( state -> {
                     int steps = state.steps() + 1;
@@ -158,18 +188,18 @@ public class StateGraphFileSystemSaverTest
         var saver = new FileSystemSaver( Paths.get( rootPath, "testCheckpointSaverWithManualRelease" ),
                 workflow.getStateSerializer() );
 
-        CompileConfig compileConfig = CompileConfig.builder()
+        var compileConfig = CompileConfig.builder()
                 .checkpointSaver(saver)
                 .build();
 
-        CompiledGraph<State> app = workflow.compile( compileConfig );
+        var app = workflow.compile( compileConfig );
 
-        RunnableConfig runnableConfig_1 = RunnableConfig.builder()
+        var runnableConfig_1 = RunnableConfig.builder()
                 .threadId("thread_1")
                 .build();
         saver.deleteFile( runnableConfig_1 );
 
-        RunnableConfig runnableConfig_2 = RunnableConfig.builder()
+        var runnableConfig_2 = RunnableConfig.builder()
                 .threadId("thread_2")
                 .build();
         saver.deleteFile( runnableConfig_2 );
@@ -235,11 +265,12 @@ public class StateGraphFileSystemSaverTest
 
     }
 
-    @Test
-    public void testCheckpointSaverWithAutoRelease() throws Exception {
+    @ParameterizedTest
+    @EnumSource( StateSerializerEnum.class )
+    public void testCheckpointSaverWithAutoRelease( StateSerializerEnum stateSerializer ) throws Exception {
         int expectedSteps = 5;
 
-        final var workflow = new StateGraph<>(State.SCHEMA, State::new)
+        final var workflow = new StateGraph<>(State.SCHEMA, stateSerializer.value )
                 .addEdge(START, "agent_1")
                 .addNode("agent_1", node_async( state -> {
                     int steps = state.steps() + 1;
