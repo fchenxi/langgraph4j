@@ -3,7 +3,7 @@ package org.bsc.langgraph4j.serializer.plain_text.gson;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
-import org.bsc.langgraph4j.serializer.plain_text.PlainTextStateSerializer;
+import org.bsc.langgraph4j.serializer.PlainTextStateSerializer;
 import org.bsc.langgraph4j.state.AgentState;
 import org.bsc.langgraph4j.state.AgentStateFactory;
 

@@ -2,9 +2,8 @@ package org.bsc.langgraph4j.checkpoint;
 
 import org.bsc.langgraph4j.RunnableConfig;
 import org.bsc.langgraph4j.serializer.StateSerializer;
-import org.bsc.langgraph4j.serializer.plain_text.PlainTextStateSerializer;
+import org.bsc.langgraph4j.serializer.PlainTextStateSerializer;
 import org.bsc.langgraph4j.state.AgentState;
-import org.bsc.langgraph4j.utils.TryFunction;
 import org.postgresql.ds.PGSimpleDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
