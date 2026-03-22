@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import org.bsc.langgraph4j.NodeOutput;
+import org.bsc.langgraph4j.checkpoint.Checkpoint;
+import org.bsc.langgraph4j.serializer.plain_text.jackson.JacksonCheckpointListSerializer;
 import org.bsc.langgraph4j.serializer.plain_text.jackson.JacksonStateSerializer;
 import org.bsc.langgraph4j.serializer.plain_text.jackson.TypeMapper;
 import org.bsc.langgraph4j.state.AgentState;
@@ -11,6 +13,8 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.Objects;
 
@@ -153,6 +157,57 @@ public class JacksonSerializerTest {
         assertEquals( person.name(), personMap.get("name"));
         assertEquals( person.age(), personMap.get("age"));
 
+    }
+
+    @Test
+    void checkPointSerializeTest() throws Exception {
+
+        var serializer = new MyJacksonStateSerializer();
+
+        var checkpoints = new LinkedList<Checkpoint>();
+        var stateData = new HashMap<String,Object>();
+
+
+        for( int i = 1; i < 5; i++) {
+
+            stateData.put("prop%d".formatted(i), "value%d".formatted(i));
+
+            final var state = new State( stateData );
+
+            final var cp = Checkpoint.builder()
+                    .id("ID%d".formatted(i))
+                    .nodeId("NODE%d".formatted(i))
+                    .nextNodeId("NEXT_NODE%d".formatted(i + 1))
+                    .state(state)
+                    .build();
+
+            checkpoints.add(cp);
+        }
+
+        final var cpSerializer = new JacksonCheckpointListSerializer(serializer);
+
+        var result = cpSerializer.writeDataAsString( checkpoints );
+
+        assertNotNull( result );
+
+        assertEquals("""
+                [
+                {"@type":"org.bsc.langgraph4j.checkpoint.Checkpoint","id":"ID1","nodeId":"NODE1","nextNodeId":"NEXT_NODE2","state":{"prop1":"value1"}},
+                {"@type":"org.bsc.langgraph4j.checkpoint.Checkpoint","id":"ID2","nodeId":"NODE2","nextNodeId":"NEXT_NODE3","state":{"prop2":"value2","prop1":"value1"}},
+                {"@type":"org.bsc.langgraph4j.checkpoint.Checkpoint","id":"ID3","nodeId":"NODE3","nextNodeId":"NEXT_NODE4","state":{"prop2":"value2","prop1":"value1","prop3":"value3"}},
+                {"@type":"org.bsc.langgraph4j.checkpoint.Checkpoint","id":"ID4","nodeId":"NODE4","nextNodeId":"NEXT_NODE5","state":{"prop2":"value2","prop1":"value1","prop4":"value4","prop3":"value3"}}]
+                """.replace("\n", ""), result );
+
+        final var newCheckpoints = cpSerializer.readDataFromString( result );
+
+        assertNotNull( newCheckpoints );
+        assertEquals( checkpoints.size(), newCheckpoints.size() );
+        for( int i = 0 ; i < checkpoints.size(); i++ ) {
+            assertEquals( checkpoints.get(i).getId(), newCheckpoints.get(i).getId() );
+            assertEquals( checkpoints.get(i).getNodeId(), newCheckpoints.get(i).getNodeId() );
+            assertEquals( checkpoints.get(i).getNextNodeId(), newCheckpoints.get(i).getNextNodeId() );
+            assertEquals( checkpoints.get(i).getState(), newCheckpoints.get(i).getState() );
+        }
 
 
 
