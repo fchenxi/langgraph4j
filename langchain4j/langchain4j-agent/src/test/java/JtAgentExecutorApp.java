@@ -18,7 +18,7 @@ import io.javelit.core.Jt;
 import io.javelit.core.JtComponent;
 import org.bsc.javelit.JtPlantUMLImage;
 import org.bsc.javelit.JtSelectAiModel;
-import org.bsc.javelit.SpinnerComponent;
+import org.bsc.javelit.JtSpinner;
 import org.bsc.langgraph4j.CompileConfig;
 import org.bsc.langgraph4j.CompiledGraph;
 import org.bsc.langgraph4j.GraphRepresentation;
@@ -91,9 +91,8 @@ public class JtAgentExecutorApp {
 
             if (start) {
 
-                var spinner = SpinnerComponent.builder()
+                var spinner = JtSpinner.builder()
                         .message("**starting the agent** ....")
-                        .showTime(true)
                         .use();
 
                 var outputComponent = Jt.expander("Workflow Steps").use();
