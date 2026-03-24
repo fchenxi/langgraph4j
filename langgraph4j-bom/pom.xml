@@ -129,9 +129,16 @@
                 <artifactId>langgraph4j-studio-springboot</artifactId>
                 <version>${project.version}</version>
             </dependency>
+
+            <!-- javelit - only work with jdk 21 and above -->
+            <dependency>
+                <groupId>org.bsc.langgraph4j</groupId>
+                <artifactId>langgraph4j-javelit</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
         </dependencies>
     </dependencyManagement>
-
 
     <build>
         <plugins>
