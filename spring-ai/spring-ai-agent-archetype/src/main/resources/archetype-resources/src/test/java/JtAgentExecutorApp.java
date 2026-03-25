@@ -21,6 +21,7 @@ import org.bsc.javelit.JtPlantUMLImage;
 import org.bsc.javelit.JtSelectAiModel;
 
 import org.bsc.javelit.JtSpinner;
+import org.bsc.javelit.SpinnerComponent;
 import org.bsc.langgraph4j.*;
 import org.bsc.langgraph4j.checkpoint.MemorySaver;
 import org.bsc.langgraph4j.spring.ai.agentexecutor.AgentExecutor;
@@ -59,7 +60,7 @@ public class JtAgentExecutorApp {
         var modelOptional = JtSelectAiModel.get();
         var streaming = Jt.toggle("Streaming output").value(false).use();
 
-        Jt.divider("hr1").use();
+        Jt.divider().use();
 
         if (modelOptional.isEmpty()) return;
 
@@ -81,7 +82,7 @@ public class JtAgentExecutorApp {
                         false))
                 .ifPresent(cb -> {
                     cb.use();
-                    Jt.divider("plantuml-divider").use();
+                    Jt.divider().use();
                 });
             }
 
@@ -182,7 +183,8 @@ public class JtAgentExecutorApp {
 
         var agentBuilder = AgentExecutor.builder()
                 .stateSerializer(stateSerializer)
-                .chatModel(chatModel, streaming);
+                .chatModel(chatModel)
+                .streaming(true);
 
         // FIX for GEMINI MODEL
         if (chatModel instanceof VertexAiGeminiChatModel) {
