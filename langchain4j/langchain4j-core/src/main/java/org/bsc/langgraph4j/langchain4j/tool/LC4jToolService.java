@@ -193,7 +193,12 @@ public final  class LC4jToolService {
 
                 return e.executeWithContext(request, newToolContext);
             })
-            .map( result -> new ToolExecutionResultMessage(request.id(), request.name(), result.resultText()) )
+            .map( result -> ToolExecutionResultMessage.builder()
+                            .id(request.id())
+                            .toolName(request.name())
+                            .text(result.resultText())
+                            .isError(result.isError())
+                            .build())
             .map( toolResultMessage -> new ScopedToolCallResult( toolResultMessage, scopedCommandResult.get() ) );
     }
 
