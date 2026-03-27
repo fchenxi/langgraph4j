@@ -88,7 +88,6 @@ public class RedisSaver extends AbstractCheckpointSaver {
     private final KeyNamingStrategy keyNamingStrategy;
     private final ObjectMapper objectMapper;
     private final StateSerializer<? extends AgentState> stateSerializer;
-    private final boolean plainTextStateSerializerLegacyMode;
     private final long ttl;
     private final TimeUnit ttlUnit;
 
@@ -140,21 +139,11 @@ public class RedisSaver extends AbstractCheckpointSaver {
         private RedissonClient redissonClient = null;
         private KeyNamingStrategy keyNamingStrategy = null;
         private StateSerializer<? extends AgentState> stateSerializer;
-        private boolean plainTextStateSerializerLegacyMode = false;
         private long ttl = -1;
         private TimeUnit ttlUnit = TimeUnit.MINUTES;
 
         public <State extends AgentState> Builder stateSerializer(StateSerializer<State> stateSerializer) {
             this.stateSerializer = stateSerializer;
-            return this;
-        }
-
-        /**
-         * Intended to enable compatibility mode for {@code PlainTextStateSerializer}-based payloads.
-         * If state serializer is not a {@code PlainTextStateSerializer} implementation this flag is ignored.
-         */
-        public Builder plainTextStateSerializerLegacyMode(boolean mode) {
-            this.plainTextStateSerializerLegacyMode = mode;
             return this;
         }
 
@@ -347,7 +336,6 @@ public class RedisSaver extends AbstractCheckpointSaver {
         this.keyNamingStrategy = builder.keyNamingStrategy != null ? builder.keyNamingStrategy : new DefaultKeyNamingStrategy();
         this.objectMapper = new ObjectMapper();
         this.stateSerializer = builder.stateSerializer;
-        this.plainTextStateSerializerLegacyMode = builder.plainTextStateSerializerLegacyMode;
         this.ttl = builder.ttl;
         this.ttlUnit = builder.ttlUnit;
     }
@@ -617,7 +605,7 @@ public class RedisSaver extends AbstractCheckpointSaver {
             return new EncodedState(objectMapper.writeValueAsString(data), null, null);
         }
 
-        if (plainTextStateSerializerLegacyMode && stateSerializer instanceof PlainTextStateSerializer<?> ser) {
+        if (stateSerializer instanceof PlainTextStateSerializer<?> ser) {
             var bytes = ser.writeDataAsString(data).getBytes(StandardCharsets.UTF_8);
             return new EncodedState(Base64.getEncoder().encodeToString(bytes), stateSerializer.contentType(), StateEncoding.PLAIN_TEXT_UTF8.redisValue);
         }
@@ -663,7 +651,7 @@ public class RedisSaver extends AbstractCheckpointSaver {
             };
         }
 
-        if (plainTextStateSerializerLegacyMode && stateSerializer instanceof PlainTextStateSerializer<?>) {
+        if (stateSerializer instanceof PlainTextStateSerializer<?>) {
             return decodePlainTextBytes(bytes);
         }
 
