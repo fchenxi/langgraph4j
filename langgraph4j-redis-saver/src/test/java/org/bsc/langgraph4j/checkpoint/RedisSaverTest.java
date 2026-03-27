@@ -4,11 +4,16 @@ import org.bsc.langgraph4j.CompileConfig;
 import org.bsc.langgraph4j.RunnableConfig;
 import org.bsc.langgraph4j.StateGraph;
 import org.bsc.langgraph4j.action.NodeAction;
+import org.bsc.langgraph4j.serializer.StateSerializer;
+import org.bsc.langgraph4j.serializer.plain_text.jackson.JacksonStateSerializer;
 import org.bsc.langgraph4j.serializer.std.ObjectStreamStateSerializer;
 import org.bsc.langgraph4j.state.AgentState;
+import org.bsc.langgraph4j.state.AgentStateFactory;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.redisson.api.RedissonClient;
 import org.redisson.config.Config;
 import org.testcontainers.containers.GenericContainer;
@@ -29,6 +34,22 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 @Testcontainers
 public class RedisSaverTest {
+    static class MyJacksonStateSerializer extends JacksonStateSerializer<AgentState> {
+        public MyJacksonStateSerializer(AgentStateFactory<AgentState> stateFactory ) {
+            super(stateFactory);
+        }
+    }
+
+    public enum StateSerializerEnum {
+        BINARY( new ObjectStreamStateSerializer<>( AgentState::new ) ),
+        JSON( new MyJacksonStateSerializer( AgentState::new) );
+
+        final StateSerializer<AgentState> stateSerializer;
+
+        StateSerializerEnum(StateSerializer<AgentState> stateSerializer) {
+            this.stateSerializer = stateSerializer;
+        }
+    }
 
     protected static final int REDIS_PORT = 6379;
     protected static final DockerImageName REDIS_IMAGE = DockerImageName.parse("redis:7-alpine");
@@ -64,11 +85,11 @@ public class RedisSaverTest {
                 .build();
     }
 
-    protected RedisSaver createRedisSaverWithStateSerializer() {
+    protected RedisSaver createRedisSaverWithStateSerializer( StateSerializerEnum param ) {
         return RedisSaver.builder()
                 .host(redisContainer.getHost())
                 .port(redisContainer.getMappedPort(REDIS_PORT))
-                .stateSerializer(new ObjectStreamStateSerializer<>(AgentState::new))
+                .stateSerializer( param.stateSerializer )
                 .build();
     }
 
@@ -215,9 +236,10 @@ public class RedisSaverTest {
         redissonClient.shutdown();
     }
 
-    @Test
-    public void testCheckpointWithStateSerializer() throws Exception {
-        var saver = createRedisSaverWithStateSerializer();
+    @ParameterizedTest
+    @EnumSource( StateSerializerEnum.class )
+    public void testCheckpointWithStateSerializer( StateSerializerEnum param ) throws Exception {
+        var saver = createRedisSaverWithStateSerializer( param );
 
         NodeAction<AgentState> agent_1 = state -> Map.of("agent_1:prop1", "agent_1:test");
 
@@ -239,7 +261,7 @@ public class RedisSaverTest {
         var history = workflow.getStateHistory(runnableConfig);
         assertFalse(history.isEmpty());
 
-        var saver2 = createRedisSaverWithStateSerializer();
+        var saver2 = createRedisSaverWithStateSerializer( param );
         var workflow2 = graph.compile(CompileConfig.builder().checkpointSaver(saver2).releaseThread(false).build());
 
         var history2 = workflow2.getStateHistory(runnableConfig);
