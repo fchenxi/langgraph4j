@@ -4,6 +4,7 @@ import org.bsc.langgraph4j.CompileConfig;
 import org.bsc.langgraph4j.RunnableConfig;
 import org.bsc.langgraph4j.StateGraph;
 import org.bsc.langgraph4j.action.NodeAction;
+import org.bsc.langgraph4j.serializer.std.ObjectStreamStateSerializer;
 import org.bsc.langgraph4j.state.AgentState;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -60,6 +61,14 @@ public class RedisSaverTest {
                 .host(redisContainer.getHost())
                 .port(redisContainer.getMappedPort(REDIS_PORT))
                 .ttl(30, TimeUnit.MINUTES)
+                .build();
+    }
+
+    protected RedisSaver createRedisSaverWithStateSerializer() {
+        return RedisSaver.builder()
+                .host(redisContainer.getHost())
+                .port(redisContainer.getMappedPort(REDIS_PORT))
+                .stateSerializer(new ObjectStreamStateSerializer<>(AgentState::new))
                 .build();
     }
 
@@ -204,6 +213,39 @@ public class RedisSaverTest {
 
         // User manages the redissonClient lifecycle
         redissonClient.shutdown();
+    }
+
+    @Test
+    public void testCheckpointWithStateSerializer() throws Exception {
+        var saver = createRedisSaverWithStateSerializer();
+
+        NodeAction<AgentState> agent_1 = state -> Map.of("agent_1:prop1", "agent_1:test");
+
+        var graph = new StateGraph<>(AgentState::new)
+                .addNode("agent_1", node_async(agent_1))
+                .addEdge(START, "agent_1")
+                .addEdge("agent_1", END);
+
+        var compileConfig = CompileConfig.builder()
+                .checkpointSaver(saver)
+                .releaseThread(false)
+                .build();
+
+        var runnableConfig = RunnableConfig.builder().build();
+        var workflow = graph.compile(compileConfig);
+
+        workflow.invoke(Map.of("input", "test-serializer"), runnableConfig);
+
+        var history = workflow.getStateHistory(runnableConfig);
+        assertFalse(history.isEmpty());
+
+        var saver2 = createRedisSaverWithStateSerializer();
+        var workflow2 = graph.compile(CompileConfig.builder().checkpointSaver(saver2).releaseThread(false).build());
+
+        var history2 = workflow2.getStateHistory(runnableConfig);
+        assertFalse(history2.isEmpty());
+
+        saver2.release(runnableConfig);
     }
 
     @Test
