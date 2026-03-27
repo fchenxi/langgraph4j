@@ -12,6 +12,8 @@ import dev.langchain4j.data.message.ToolExecutionResultMessage;
 
 import java.io.IOException;
 
+import static java.util.Optional.ofNullable;
+
 public interface ToolExecutionResultMessageHandler {
 
     class Serializer extends StdSerializer<ToolExecutionResultMessage> {
@@ -27,6 +29,7 @@ public interface ToolExecutionResultMessageHandler {
             gen.writeStringField("id", msg.id());
             gen.writeStringField("toolName", msg.toolName());
             gen.writeStringField("text", msg.text());
+            gen.writeBooleanField("isError", ofNullable(msg.isError()).orElse(false) );
             gen.writeEndObject();
         }
 
@@ -44,10 +47,12 @@ public interface ToolExecutionResultMessageHandler {
         }
 
         protected ToolExecutionResultMessage deserialize(JsonNode node) throws IOException {
-            return new ToolExecutionResultMessage(
-                    node.get("id").asText(),
-                    node.get("toolName").asText(),
-                    node.get("text").asText() );
+            return ToolExecutionResultMessage.builder()
+                    .id( node.get("id").asText() )
+                    .toolName( node.get("toolName").asText() )
+                    .text( node.get("text").asText() )
+                    .isError( node.get("isError").asBoolean() )
+                    .build();
         }
 
     }
