@@ -8,6 +8,8 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 
+import static java.util.Optional.ofNullable;
+
 /**
  * This class is responsible for serializing and deserializing 
  * instances of ToolExecutionResultMessage. It implements the 
@@ -31,6 +33,7 @@ public class ToolExecutionResultMessageSerializer implements NullableObjectSeria
         writeNullableUTF( object.id(), out );
         Serializer.writeUTF( object.toolName(), out );
         Serializer.writeUTF( object.text(), out );
+        out.writeBoolean( ofNullable(object.isError()).orElse(false) );
     }
 
     /**
@@ -48,6 +51,12 @@ public class ToolExecutionResultMessageSerializer implements NullableObjectSeria
         String id = readNullableUTF( in ).orElse( null );
         String toolName = Serializer.readUTF(in);
         String text = Serializer.readUTF(in);
-        return new ToolExecutionResultMessage( id, toolName, text );
+        Boolean isError = in.readBoolean();
+        return ToolExecutionResultMessage.builder()
+                .id( id )
+                .toolName( toolName )
+                .text( text )
+                .isError( isError )
+                .build();
     }
 }
