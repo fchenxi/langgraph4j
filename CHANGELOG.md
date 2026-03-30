@@ -2,6 +2,107 @@
 
 
 
+<!-- "name: v1.8.11" is a release tag -->
+
+## [v1.8.11](https://github.com/bsorrentino/langgraph4j/releases/tag/v1.8.11) (2026-03-30)
+
+### Features
+
+ *  **langchain4j/ToolExecutionResultMessageHandler**  Add support for isError field in JSON serialization and deserialization ([5357026635f5054](https://github.com/bsorrentino/langgraph4j/commit/5357026635f50545cc2b0f7d5746660204feddf6))
+     > working on #367
+   
+ *  **langchain4j/serializer**  Add support for isError flag in ToolExecutionResultMessage serializer ([2b9b2a8cb16a8bd](https://github.com/bsorrentino/langgraph4j/commit/2b9b2a8cb16a8bd1f3971b4aea0e972b21a22de8))
+     > working on #367
+   
+ *  **javelit**  Implement spinner component ([ffd554f9afa176f](https://github.com/bsorrentino/langgraph4j/commit/ffd554f9afa176fc19718a4dfd0a9e299372337d))
+   
+ *  **CheckpointHandler**  Implement Jackson-based serialization for Checkpoint object ([1975c2db87055d9](https://github.com/bsorrentino/langgraph4j/commit/1975c2db87055d9432cd3f74354d5d20308e434e))
+   
+ *  **JacksonCheckpointListSerializer**  Implement Jackson-based serialization for Checkpoint lists ([484279164a61d49](https://github.com/bsorrentino/langgraph4j/commit/484279164a61d4938c6438bd2274d263b65cc032))
+   
+ *  **PlainTextStateSerializer**  implements new PlainTextSerializer interface ([ccfff979709d72b](https://github.com/bsorrentino/langgraph4j/commit/ccfff979709d72b2b5ed6b65dc81d300b24b5edb))
+   
+ *  **CheckpointListSerializer**  Add serializer for checkpoint lists ([3a2000f25772034](https://github.com/bsorrentino/langgraph4j/commit/3a2000f25772034220596c6dc456857f50abe7b1))
+   
+ *  **CheckpointSerializer**  add checkpoint serialization support ([924749a8f7149b6](https://github.com/bsorrentino/langgraph4j/commit/924749a8f7149b624a0cb00e4a0432187b38194c))
+   
+ *  **serializer**  Add PlainTextSerializer interface for serializing data as strings ([bcb437bc34d33ad](https://github.com/bsorrentino/langgraph4j/commit/bcb437bc34d33ad68db31278cacb74861165e98d))
+   
+
+
+### Refactor
+
+ -  **langgraph4j-core/src/main/java/org/bsc/langgraph4j/CompiledGraph.java**  enhance null safety and improve map merging strategy in state processing ([96292d3d398515a](https://github.com/bsorrentino/langgraph4j/commit/96292d3d398515ab276877f8e1068cea2059e11e))
+    > Add null check for entry keys to prevent NullPointerException when processing partial states. Replace stream collect with LinkedHashMap-based collector that preserves insertion order and properly handles map merging via put/putAll operations.
+
+ -  **RedisSaver**  remove legacy mode for plain text state serializer ([22d4e9644a68606](https://github.com/bsorrentino/langgraph4j/commit/22d4e9644a68606cec79d6e929d968b55b4043cf))
+    > working on PR #369 related to issue #366
+
+ -  **langchain4j/LC4jToolService**  Refactor map function to use include isError attribute. ([2b8e815f787f9a6](https://github.com/bsorrentino/langgraph4j/commit/2b8e815f787f9a60e4c56ef005c691aa2b4e4389))
+    > working on #367
+
+ -  **javelit**  Deprecate SpinnerComponent, use JtSpinner instead ([fa6718788e47e9a](https://github.com/bsorrentino/langgraph4j/commit/fa6718788e47e9ab027e77ee71f74170efe9a9fc))
+   
+ -  **javelit**  replace SpinnerComponent with JtSpinner and remove showTime/overlay references ([320056209c6499b](https://github.com/bsorrentino/langgraph4j/commit/320056209c6499bc4b70426230a3efc921365c4e))
+   
+ -  **javelit**  Replace SpinnerComponent with JtSpinner in agent executor app ([a05c4d0b4d1cc0f](https://github.com/bsorrentino/langgraph4j/commit/a05c4d0b4d1cc0f70c614b68d453e610fc3315c6))
+   
+ -  **javelit**  replace SpinnerComponent with JtSpinner and remove showTime call ([e463be90517d342](https://github.com/bsorrentino/langgraph4j/commit/e463be90517d3428ea482642e0dcabd44426cf66))
+   
+ -  update import for PlainTextStateSerializer ([0d9eec0c80a82a0](https://github.com/bsorrentino/langgraph4j/commit/0d9eec0c80a82a06c1299d33628f6b2f5a01d024))
+   
+ -  **PlainTextStateSerializer**  relocate class ([388d00bb0fa4708](https://github.com/bsorrentino/langgraph4j/commit/388d00bb0fa4708c74b9cf8fcd06e0b907e10680))
+   
+ -  **FileSystemSaver**  Update checkpoint serialization to use new serializers and dynamic file extension handling ([7f7fccdc4de1719](https://github.com/bsorrentino/langgraph4j/commit/7f7fccdc4de17196c2b90f17e1285550e2e10454))
+    > - The implementation now supports both binary and JSON serialization formats through the use of Jackson-based serializers.
+ > - The file extension is determined dynamically based on the serializer type
+
+
+### Test 
+
+ -  Add test for handling null values in map stream operations ([f2ac044bee13f94](https://github.com/bsorrentino/langgraph4j/commit/f2ac044bee13f9447ec30db9f103acdbd7d5b85a))
+    > working on #370
+
+ -  **langgraph4j-redis-saver**  enhance test with parameterized state serializer validation for Binary & JSON ([6df8be57c5a6130](https://github.com/bsorrentino/langgraph4j/commit/6df8be57c5a613074eca7f21a8d3ba7c36d21cf8))
+    > working on PR #369 related to issue #366
+
+ -  **spring-ai-agent/javelit**  replace SpinnerComponent with JtSpinner in test setup ([d0b93879d214b1d](https://github.com/bsorrentino/langgraph4j/commit/d0b93879d214b1d13ccd4dc5ce396d70a2fd8e71))
+   
+ -  verify the Json based FileSystemSaver  saver ([6c01e305dad695a](https://github.com/bsorrentino/langgraph4j/commit/6c01e305dad695ae927c0f209136648699ad50e1))
+   
+ -  verify the checkpoint saver ([09e5e36717dbe6f](https://github.com/bsorrentino/langgraph4j/commit/09e5e36717dbe6f6692192363e95485532d5bacf))
+   
+
+### Documentation
+
+ -  bump to next version 1.8.11 ([cc7a966c0fd4350](https://github.com/bsorrentino/langgraph4j/commit/cc7a966c0fd4350a264c60498cb43196371b8651))
+
+ -  update changelog ([982c220b80da704](https://github.com/bsorrentino/langgraph4j/commit/982c220b80da704fab3a5b0dde3c30cbf09742a0))
+
+
+### ALM 
+
+ -  **javelit**  bump to next version 1.8.11 ([d091563df36da62](https://github.com/bsorrentino/langgraph4j/commit/d091563df36da620f790adbe52bff3e0a13128a4))
+   
+ -  bump to next version 1.8.11 ([b1ec0b9ec496c88](https://github.com/bsorrentino/langgraph4j/commit/b1ec0b9ec496c88386528613616cf5c53e156909))
+   
+ -  **langgraph4j-core**  update async-generator to 4.3.0 ([9cbf49613751e60](https://github.com/bsorrentino/langgraph4j/commit/9cbf49613751e60b9ca04a606aa84899f87eab49))
+   
+ -  **core**  update async-generator dependency version to 4.3-SNAPSHOT ([3612eef8cba9834](https://github.com/bsorrentino/langgraph4j/commit/3612eef8cba9834404804026b85bde08a67d1ada))
+   
+ -  **spring-ai-agent**  upgrade archetype ([472ac3179f22e5c](https://github.com/bsorrentino/langgraph4j/commit/472ac3179f22e5c99a2ecc1df3d44f1f284d7380))
+   
+ -  **bom**  Add javelit dependency for JDK 21+ support ([fd5df8bf17c8976](https://github.com/bsorrentino/langgraph4j/commit/fd5df8bf17c8976084151aaece11f096716ac6be))
+   
+ -  **javelit**  update dependency version to 0.86.0 ([be8f8f63469ba20](https://github.com/bsorrentino/langgraph4j/commit/be8f8f63469ba2030134222f5db5c627dc489bfe))
+   
+ -  bump to next dev version 1.8-SNAPSHOT ([0b05b451fec707e](https://github.com/bsorrentino/langgraph4j/commit/0b05b451fec707eead6eff99aaafae6c7f4d0009))
+   
+
+
+
+
+
 <!-- "name: v1.8.10" is a release tag -->
 
 ## [v1.8.10](https://github.com/bsorrentino/langgraph4j/releases/tag/v1.8.10) (2026-03-18)
