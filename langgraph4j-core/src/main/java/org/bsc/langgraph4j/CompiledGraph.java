@@ -767,11 +767,15 @@ public final class CompiledGraph<State extends AgentState> implements GraphDefin
                                 // FIX #102
                                 // Assume that the whatever used appender channel doesn't accept duplicates
                                 // FIX #104: remove generator
-                                var partialStateWithoutGenerator = partialState.entrySet().stream()
-                                        .filter( e -> !Objects.equals(e.getKey(),generatorEntry.getKey()))
-                                        .collect( Collectors.toMap( Map.Entry::getKey, Map.Entry::getValue));
+                                final Map<String,Object> partialStateWithoutGenerator = partialState.entrySet().stream()
+                                        .filter( e -> e.getKey() != null &&
+                                                !Objects.equals(e.getKey(),generatorEntry.getKey()))
+                                        .collect( LinkedHashMap::new,
+                                                ( map, entry ) ->
+                                                        map.put( entry.getKey(), entry.getValue() ),
+                                                Map::putAll );
 
-                                var intermediateState = AgentState.updateState( context.currentState(),
+                                final var intermediateState = AgentState.updateState( context.currentState(),
                                         partialStateWithoutGenerator,
                                         stateGraph.getChannels() );
 
@@ -1163,4 +1167,3 @@ public final class CompiledGraph<State extends AgentState> implements GraphDefin
     }
 
 }
-

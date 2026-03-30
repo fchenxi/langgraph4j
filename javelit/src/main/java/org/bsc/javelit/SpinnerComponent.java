@@ -25,7 +25,10 @@ import static java.util.Objects.requireNonNull;
  * A spinner component to indicate loading state.
  *
  * developed by bsorrentino (bartolomeo.sorrentino@gmail.com)
+ *
+ * @deprecated use JtSpinner
  */
+@Deprecated(forRemoval = true)
 public class SpinnerComponent extends JtComponent<JtContainer> {
     final Integer height;
     final Boolean border;

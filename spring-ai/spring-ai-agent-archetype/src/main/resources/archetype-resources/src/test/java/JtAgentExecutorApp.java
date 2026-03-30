@@ -1,8 +1,8 @@
 #set( $symbol_pound = '#' )
 #set( $symbol_dollar = '$' )
 #set( $symbol_escape = '\' )
-//DEPS ${package}:${artifactId}:1.8.10
-//DEPS ${package}:langgraph4j-javelit:1.8.10
+//DEPS ${package}:${artifactId}:1.8.11
+//DEPS ${package}:langgraph4j-javelit:1.8.11
 //DEPS net.sourceforge.plantuml:plantuml-mit:1.2025.10
 //DEPS org.springframework.ai:spring-ai-bom:1.1.0@pom
 //DEPS org.springframework.ai:spring-ai-client-chat
@@ -20,6 +20,7 @@ import io.javelit.core.JtComponent;
 import org.bsc.javelit.JtPlantUMLImage;
 import org.bsc.javelit.JtSelectAiModel;
 
+import org.bsc.javelit.JtSpinner;
 import org.bsc.javelit.SpinnerComponent;
 import org.bsc.langgraph4j.*;
 import org.bsc.langgraph4j.checkpoint.MemorySaver;
@@ -59,7 +60,7 @@ public class JtAgentExecutorApp {
         var modelOptional = JtSelectAiModel.get();
         var streaming = Jt.toggle("Streaming output").value(false).use();
 
-        Jt.divider("hr1").use();
+        Jt.divider().use();
 
         if (modelOptional.isEmpty()) return;
 
@@ -81,7 +82,7 @@ public class JtAgentExecutorApp {
                         false))
                 .ifPresent(cb -> {
                     cb.use();
-                    Jt.divider("plantuml-divider").use();
+                    Jt.divider().use();
                 });
             }
 
@@ -96,9 +97,8 @@ public class JtAgentExecutorApp {
 
             if (start) {
 
-                var spinner = SpinnerComponent.builder()
+                var spinner = JtSpinner.builder()
                         .message("**starting the agent** ....")
-                        .showTime(true)
                         .use();
 
                 try {
@@ -183,7 +183,8 @@ public class JtAgentExecutorApp {
 
         var agentBuilder = AgentExecutor.builder()
                 .stateSerializer(stateSerializer)
-                .chatModel(chatModel, streaming);
+                .chatModel(chatModel)
+                .streaming(true);
 
         // FIX for GEMINI MODEL
         if (chatModel instanceof VertexAiGeminiChatModel) {

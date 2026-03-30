@@ -1,5 +1,5 @@
-//DEPS org.bsc.langgraph4j:langgraph4j-springai-agentexecutor:1.8.10
-//DEPS org.bsc.langgraph4j:langgraph4j-javelit:1.8.10
+//DEPS org.bsc.langgraph4j:langgraph4j-springai-agentexecutor:1.8.11
+//DEPS org.bsc.langgraph4j:langgraph4j-javelit:1.8.11
 //DEPS net.sourceforge.plantuml:plantuml-mit:1.2025.10
 //DEPS org.springframework.ai:spring-ai-bom:1.1.0@pom
 //DEPS org.springframework.ai:spring-ai-client-chat
@@ -17,6 +17,7 @@ import io.javelit.core.JtComponent;
 import org.bsc.javelit.JtPlantUMLImage;
 import org.bsc.javelit.JtSelectAiModel;
 
+import org.bsc.javelit.JtSpinner;
 import org.bsc.javelit.SpinnerComponent;
 import org.bsc.langgraph4j.*;
 import org.bsc.langgraph4j.checkpoint.MemorySaver;
@@ -93,9 +94,8 @@ public class JtAgentExecutorApp {
 
             if (start) {
 
-                var spinner = SpinnerComponent.builder()
+                var spinner = JtSpinner.builder()
                         .message("**starting the agent** ....")
-                        .showTime(true)
                         .use();
 
                 try {

@@ -1,7 +1,7 @@
-//DEPS org.bsc.langgraph4j:langgraph4j-javelit:1.8.10
+//DEPS org.bsc.langgraph4j:langgraph4j-javelit:1.8.11
 
 import io.javelit.core.Jt;
-import org.bsc.javelit.SpinnerComponent;
+import org.bsc.javelit.JtSpinner;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -25,9 +25,8 @@ public class JtSpinnerTestApp {
 
         if( Jt.button("show spinner (use case 1)").use() ) {
 
-            SpinnerComponent.builder()
+            JtSpinner.builder()
                     .message("**this is the spinner test**")
-                    .showTime(true)
                     .onStart(() -> {
                         try {
                             Thread.sleep(1000 * 5);
@@ -38,16 +37,15 @@ public class JtSpinnerTestApp {
                     })
                     .onComplete((result, elapsed) ->
                             Jt.info("**Completed in** %ds".formatted(elapsed.toSeconds())))
-                    .overlay(overlay)
+                    .overlay()
                     .use();
         }
 
         if( Jt.button("show spinner (use case 2)").use() ) {
 
-            var spinner = SpinnerComponent.builder()
+            var spinner = JtSpinner.builder()
                     .message("**this is the spinner test**")
-                    .showTime(true)
-                    .overlay(overlay)
+                    .overlay()
                     .use();
 
                     final var start = Instant.now();

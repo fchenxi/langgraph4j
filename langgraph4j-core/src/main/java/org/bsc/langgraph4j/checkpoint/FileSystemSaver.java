@@ -4,9 +4,10 @@ import org.bsc.langgraph4j.LG4JLoggable;
 import org.bsc.langgraph4j.RunnableConfig;
 import org.bsc.langgraph4j.serializer.Serializer;
 import org.bsc.langgraph4j.serializer.StateSerializer;
-import org.bsc.langgraph4j.serializer.std.NullableObjectSerializer;
+import org.bsc.langgraph4j.serializer.plain_text.jackson.JacksonCheckpointListSerializer;
+import org.bsc.langgraph4j.serializer.plain_text.jackson.JacksonStateSerializer;
+import org.bsc.langgraph4j.serializer.std.CheckpointListSerializer;
 import org.bsc.langgraph4j.state.AgentState;
-import org.bsc.langgraph4j.utils.TryFunction;
 
 import java.io.*;
 import java.nio.file.Files;
@@ -32,17 +33,14 @@ import static java.util.Objects.requireNonNull;
  *
  */
 public class FileSystemSaver extends AbstractCheckpointSaver implements LG4JLoggable {
-    public static final String EXTENSION = ".saver";
 
     private final Path targetFolder;
-    private final Serializer<Checkpoint> serializer;
+    private final Serializer<LinkedList<Checkpoint>> checkpointsSerializer;
+    private final String extension;
 
-    @SuppressWarnings("unchecked")
-    public FileSystemSaver(Path targetFolder, StateSerializer<? extends AgentState> stateSerializer) {
-
-        requireNonNull(stateSerializer, "stateSerializer cannot be null");
+    public FileSystemSaver(Path targetFolder, Serializer<LinkedList<Checkpoint>> checkpointsSerializer) {
         this.targetFolder = requireNonNull(targetFolder, "targetFolder cannot be null");
-        this.serializer = new CheckPointSerializer((StateSerializer<AgentState>) stateSerializer);
+        this.checkpointsSerializer = requireNonNull(checkpointsSerializer, "checkpoints serializer cannot be null");
 
         File targetFolderAsFile = targetFolder.toFile();
 
@@ -56,14 +54,22 @@ public class FileSystemSaver extends AbstractCheckpointSaver implements LG4JLogg
             }
         }
 
+        this.extension = ( checkpointsSerializer instanceof JacksonCheckpointListSerializer ) ? "-saver.json" : "-saver.bin" ;
+
+    }
+
+    public FileSystemSaver(Path targetFolder, StateSerializer<? extends AgentState> stateSerializer) {
+        this( targetFolder, ( stateSerializer instanceof JacksonStateSerializer<? extends AgentState> jsonStateSerializer) ?
+            new JacksonCheckpointListSerializer(jsonStateSerializer) :
+            new CheckpointListSerializer(stateSerializer));
     }
 
     private String getBaseName(RunnableConfig config) {
-        return format("thread-%s", threadId(config));
+        return "thread-%s".formatted( threadId(config));
     }
 
     private Path getPath(RunnableConfig config) {
-        return Paths.get(targetFolder.toString(), getBaseName(config).concat(EXTENSION));
+        return Paths.get(targetFolder.toString(), getBaseName(config).concat(extension));
     }
 
     private File getFile(RunnableConfig config) {
@@ -73,24 +79,27 @@ public class FileSystemSaver extends AbstractCheckpointSaver implements LG4JLogg
     private void serialize(LinkedList<Checkpoint> checkpoints, File outFile) throws IOException {
         requireNonNull(checkpoints, "checkpoints cannot be null");
         requireNonNull(outFile, "outFile cannot be null");
-        try (ObjectOutputStream oos = new ObjectOutputStream(Files.newOutputStream(outFile.toPath()))) {
 
-            oos.writeInt(checkpoints.size());
-            for (Checkpoint checkpoint : checkpoints) {
-                serializer.write(checkpoint, oos);
+        final var outFilePath = outFile.toPath();
+        if( checkpointsSerializer instanceof JacksonCheckpointListSerializer jsonSerializer  ) {
+            Files.writeString( outFilePath, jsonSerializer.writeDataAsString(checkpoints) );
+        }
+        else {
+            try (ObjectOutputStream oos = new ObjectOutputStream(Files.newOutputStream(outFilePath))) {
+                checkpointsSerializer.write(checkpoints, oos);
             }
         }
     }
 
-    private void deserialize(File file, LinkedList<Checkpoint> result) throws IOException, ClassNotFoundException {
+    private LinkedList<Checkpoint> deserialize(File file) throws IOException, ClassNotFoundException {
         requireNonNull(file, "file cannot be null");
-        requireNonNull(result, "result cannot be null");
 
+        final var filePath = file.toPath();
+        if( checkpointsSerializer instanceof JacksonCheckpointListSerializer jsonSerializer  ) {
+            return jsonSerializer.readDataFromString(Files.readString(filePath));
+        }
         try (ObjectInputStream ois = new ObjectInputStream(Files.newInputStream(file.toPath()))) {
-            int size = ois.readInt();
-            for (int i = 0; i < size; i++) {
-                result.add(serializer.read(ois));
-            }
+            return checkpointsSerializer.read(ois);
         }
     }
 
@@ -108,11 +117,9 @@ public class FileSystemSaver extends AbstractCheckpointSaver implements LG4JLogg
     @Override
     protected LinkedList<Checkpoint> loadCheckpoints(RunnableConfig config) throws Exception {
         final var targetFile = getFile(config);
-        final var checkpoints = new LinkedList<Checkpoint>();
-        if (targetFile.exists() ) {
-            deserialize(targetFile, checkpoints);
-        }
-        return checkpoints;
+        return targetFile.exists() ?
+                deserialize(targetFile) :
+                new LinkedList<>();
 
     }
 
@@ -136,7 +143,7 @@ public class FileSystemSaver extends AbstractCheckpointSaver implements LG4JLogg
             return new Tag( threadId(config), List.of());
         }
 
-        final var versionPattern = Pattern.compile(format("%s-v(\\d+)\\%s$", getBaseName(config), EXTENSION));
+        final var versionPattern = Pattern.compile(format("%s-v(\\d+)\\%s$", getBaseName(config), extension));
 
         int maxVersion = 0;
         try (var stream = Files.list(targetFolder)) {
@@ -153,7 +160,7 @@ public class FileSystemSaver extends AbstractCheckpointSaver implements LG4JLogg
         }
 
         int nextVersion = maxVersion + 1;
-        var backupFilename = format("%s-v%d%s", getBaseName(config), nextVersion, EXTENSION);
+        var backupFilename = format("%s-v%d%s", getBaseName(config), nextVersion, extension);
         Path backupPath = targetFolder.resolve(backupFilename);
 
         Files.copy(currentPath, backupPath, StandardCopyOption.REPLACE_EXISTING);
@@ -175,26 +182,3 @@ public class FileSystemSaver extends AbstractCheckpointSaver implements LG4JLogg
     }
 }
 
-record CheckPointSerializer(
-        StateSerializer<AgentState> stateSerializer) implements NullableObjectSerializer<Checkpoint> {
-
-    @Override
-    public void write(Checkpoint object, ObjectOutput out) throws IOException {
-        Serializer.writeUTF(object.getId(), out);
-        writeNullableUTF(object.getNodeId(), out);
-        writeNullableUTF(object.getNextNodeId(), out);
-        AgentState state = stateSerializer.stateFactory().apply(object.getState());
-        stateSerializer.write(state, out);
-    }
-
-    @Override
-    public Checkpoint read(ObjectInput in) throws IOException, ClassNotFoundException {
-        return Checkpoint.builder()
-                .id(Serializer.readUTF(in))
-                .nextNodeId(readNullableUTF(in).orElse(null))
-                .nodeId(readNullableUTF(in).orElse(null))
-                .state(stateSerializer.read(in))
-                .build();
-    }
-
-}

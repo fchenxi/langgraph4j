@@ -1,7 +1,5 @@
-package org.bsc.langgraph4j.serializer.plain_text;
+package org.bsc.langgraph4j.serializer;
 
-import org.bsc.langgraph4j.serializer.Serializer;
-import org.bsc.langgraph4j.serializer.StateSerializer;
 import org.bsc.langgraph4j.state.AgentState;
 import org.bsc.langgraph4j.state.AgentStateFactory;
 import org.bsc.langgraph4j.utils.Types;
@@ -12,25 +10,20 @@ import java.util.Map;
 import java.util.Optional;
 
 
-public abstract class PlainTextStateSerializer<State extends AgentState> extends StateSerializer<State> {
+public abstract class PlainTextStateSerializer<State extends AgentState> extends StateSerializer<State> implements PlainTextSerializer<Map<String,Object>> {
 
     protected PlainTextStateSerializer(AgentStateFactory<State> stateFactory) {
         super(stateFactory);
     }
 
-    public abstract String writeDataAsString(Map<String, Object> data) throws IOException;
-    public abstract Map<String, Object> readDataFromString(String string) throws IOException;
-
     @Override
     public final void writeData(Map<String, Object> data, ObjectOutput out) throws IOException {
-        String text = writeDataAsString(data);
-        Serializer.writeUTF( text, out );
+        PlainTextSerializer.super.writeData(data, out);
     }
 
     @Override
     public final Map<String, Object> readData(ObjectInput in) throws IOException {
-        String text = Serializer.readUTF(in);
-        return readDataFromString(text);
+        return PlainTextSerializer.super.readData(in);
     }
 
 

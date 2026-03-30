@@ -2,7 +2,9 @@ package org.bsc.langgraph4j.checkpoint;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.bsc.langgraph4j.RunnableConfig;
-import org.bsc.langgraph4j.utils.TryFunction;
+import org.bsc.langgraph4j.serializer.PlainTextStateSerializer;
+import org.bsc.langgraph4j.serializer.StateSerializer;
+import org.bsc.langgraph4j.state.AgentState;
 import org.redisson.Redisson;
 import org.redisson.api.RBatch;
 import org.redisson.api.RMap;
@@ -12,6 +14,8 @@ import org.redisson.client.codec.StringCodec;
 import org.redisson.client.protocol.ScoredEntry;
 import org.redisson.config.Config;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
@@ -73,14 +77,44 @@ public class RedisSaver extends AbstractCheckpointSaver {
     private static final String NODE_ID_FIELD = "node_id";
     private static final String NEXT_NODE_ID_FIELD = "next_node_id";
     private static final String STATE_DATA_FIELD = "state_data";
+    private static final String STATE_CONTENT_TYPE_FIELD = "state_content_type";
+    private static final String STATE_ENCODING_FIELD = "state_encoding";
+    private static final String STATE_SCHEMA_VERSION_FIELD = "schema_version";
     private static final String SAVED_AT_FIELD = "saved_at";
+    private static final String CURRENT_STATE_SCHEMA_VERSION = "1";
 
     // Configuration
     private final RedissonClient redissonClient;
     private final KeyNamingStrategy keyNamingStrategy;
     private final ObjectMapper objectMapper;
+    private final StateSerializer<? extends AgentState> stateSerializer;
     private final long ttl;
     private final TimeUnit ttlUnit;
+
+    private enum StateEncoding {
+        SERIALIZER_BYTES("serializer-bytes"),
+        PLAIN_TEXT_UTF8("plain-text-utf8");
+
+        private final String redisValue;
+
+        StateEncoding(String redisValue) {
+            this.redisValue = redisValue;
+        }
+
+        static Optional<StateEncoding> fromRedisValue(String redisValue) {
+            if (redisValue == null || redisValue.isBlank()) {
+                return Optional.empty();
+            }
+            for (StateEncoding encoding : values()) {
+                if (encoding.redisValue.equals(redisValue)) {
+                    return Optional.of(encoding);
+                }
+            }
+            return Optional.empty();
+        }
+    }
+
+    private record EncodedState(String payload, String contentType, String encodingValue) {}
 
     /**
      * A builder for RedisSaver.
@@ -104,8 +138,14 @@ public class RedisSaver extends AbstractCheckpointSaver {
         private int retryAttempts = 3;
         private RedissonClient redissonClient = null;
         private KeyNamingStrategy keyNamingStrategy = null;
+        private StateSerializer<? extends AgentState> stateSerializer;
         private long ttl = -1;
         private TimeUnit ttlUnit = TimeUnit.MINUTES;
+
+        public <State extends AgentState> Builder stateSerializer(StateSerializer<State> stateSerializer) {
+            this.stateSerializer = stateSerializer;
+            return this;
+        }
 
         /**
          * Sets the Redis host.
@@ -295,6 +335,7 @@ public class RedisSaver extends AbstractCheckpointSaver {
         this.redissonClient = Objects.requireNonNull(builder.redissonClient, "redissonClient cannot be null");
         this.keyNamingStrategy = builder.keyNamingStrategy != null ? builder.keyNamingStrategy : new DefaultKeyNamingStrategy();
         this.objectMapper = new ObjectMapper();
+        this.stateSerializer = builder.stateSerializer;
         this.ttl = builder.ttl;
         this.ttlUnit = builder.ttlUnit;
     }
@@ -339,13 +380,14 @@ public class RedisSaver extends AbstractCheckpointSaver {
                     continue; // Checkpoint was deleted
                 }
 
-                String stateJson = checkpointMap.get(STATE_DATA_FIELD);
-                if (stateJson == null) {
+                String statePayload = checkpointMap.get(STATE_DATA_FIELD);
+                if (statePayload == null) {
                     continue;
                 }
 
-                @SuppressWarnings("unchecked")
-                Map<String, Object> state = objectMapper.readValue(stateJson, Map.class);
+                String stateContentType = checkpointMap.get(STATE_CONTENT_TYPE_FIELD);
+                String stateEncoding = checkpointMap.get(STATE_ENCODING_FIELD);
+                Map<String, Object> state = decodeState(statePayload, stateContentType, stateEncoding);
 
                 Checkpoint checkpoint = Checkpoint.builder()
                         .id(checkpointMap.get(CHECKPOINT_ID_FIELD))
@@ -387,13 +429,20 @@ public class RedisSaver extends AbstractCheckpointSaver {
         // Insert checkpoint
         String checkpointId = checkpoint.getId();
         String checkpointKey = keyNamingStrategy.checkpointKey(checkpointId);
-        String stateJson = objectMapper.writeValueAsString(checkpoint.getState());
+        EncodedState encodedState = encodeState(checkpoint.getState());
 
         batch.getMap(checkpointKey, StringCodec.INSTANCE).fastPutAsync(CHECKPOINT_ID_FIELD, checkpointId);
         batch.getMap(checkpointKey, StringCodec.INSTANCE).fastPutAsync(THREAD_ID_REF_FIELD, threadId);
         batch.getMap(checkpointKey, StringCodec.INSTANCE).fastPutAsync(NODE_ID_FIELD, checkpoint.getNodeId() != null ? checkpoint.getNodeId() : "");
         batch.getMap(checkpointKey, StringCodec.INSTANCE).fastPutAsync(NEXT_NODE_ID_FIELD, checkpoint.getNextNodeId() != null ? checkpoint.getNextNodeId() : "");
-        batch.getMap(checkpointKey, StringCodec.INSTANCE).fastPutAsync(STATE_DATA_FIELD, stateJson);
+        batch.getMap(checkpointKey, StringCodec.INSTANCE).fastPutAsync(STATE_DATA_FIELD, encodedState.payload());
+        if (encodedState.contentType() != null) {
+            batch.getMap(checkpointKey, StringCodec.INSTANCE).fastPutAsync(STATE_CONTENT_TYPE_FIELD, encodedState.contentType());
+        }
+        if (encodedState.encodingValue() != null) {
+            batch.getMap(checkpointKey, StringCodec.INSTANCE).fastPutAsync(STATE_ENCODING_FIELD, encodedState.encodingValue());
+            batch.getMap(checkpointKey, StringCodec.INSTANCE).fastPutAsync(STATE_SCHEMA_VERSION_FIELD, CURRENT_STATE_SCHEMA_VERSION);
+        }
         batch.getMap(checkpointKey, StringCodec.INSTANCE).fastPutAsync(SAVED_AT_FIELD, String.valueOf(timestamp));
 
         // Add to sorted set with timestamp as score
@@ -405,7 +454,6 @@ public class RedisSaver extends AbstractCheckpointSaver {
 
         // Set TTL after batch execution (if configured)
         if (ttl >= 0) {
-            String threadKey = keyNamingStrategy.threadKey(threadId);
             long ttlMillis = ttlUnit.toMillis(ttl);
             redissonClient.getBucket(threadNameKey, StringCodec.INSTANCE).expire( Duration.ofMillis(ttlMillis) );
             redissonClient.getBucket(checkpointKey, StringCodec.INSTANCE).expire( Duration.ofMillis(ttlMillis) );
@@ -442,13 +490,20 @@ public class RedisSaver extends AbstractCheckpointSaver {
 
             // Insert new checkpoint
             String newCheckpointKey = keyNamingStrategy.checkpointKey(newCheckpointId);
-            String stateJson = objectMapper.writeValueAsString(checkpoint.getState());
+            EncodedState encodedState = encodeState(checkpoint.getState());
 
             batch.getMap(newCheckpointKey, StringCodec.INSTANCE).fastPutAsync(CHECKPOINT_ID_FIELD, newCheckpointId);
             batch.getMap(newCheckpointKey, StringCodec.INSTANCE).fastPutAsync(THREAD_ID_REF_FIELD, threadId);
             batch.getMap(newCheckpointKey, StringCodec.INSTANCE).fastPutAsync(NODE_ID_FIELD, checkpoint.getNodeId() != null ? checkpoint.getNodeId() : "");
             batch.getMap(newCheckpointKey, StringCodec.INSTANCE).fastPutAsync(NEXT_NODE_ID_FIELD, checkpoint.getNextNodeId() != null ? checkpoint.getNextNodeId() : "");
-            batch.getMap(newCheckpointKey, StringCodec.INSTANCE).fastPutAsync(STATE_DATA_FIELD, stateJson);
+            batch.getMap(newCheckpointKey, StringCodec.INSTANCE).fastPutAsync(STATE_DATA_FIELD, encodedState.payload());
+            if (encodedState.contentType() != null) {
+                batch.getMap(newCheckpointKey, StringCodec.INSTANCE).fastPutAsync(STATE_CONTENT_TYPE_FIELD, encodedState.contentType());
+            }
+            if (encodedState.encodingValue() != null) {
+                batch.getMap(newCheckpointKey, StringCodec.INSTANCE).fastPutAsync(STATE_ENCODING_FIELD, encodedState.encodingValue());
+                batch.getMap(newCheckpointKey, StringCodec.INSTANCE).fastPutAsync(STATE_SCHEMA_VERSION_FIELD, CURRENT_STATE_SCHEMA_VERSION);
+            }
             batch.getMap(newCheckpointKey, StringCodec.INSTANCE).fastPutAsync(SAVED_AT_FIELD, String.valueOf(timestamp));
 
             // Add to sorted set with new timestamp
@@ -541,6 +596,79 @@ public class RedisSaver extends AbstractCheckpointSaver {
     @Deprecated(forRemoval = true)
     public Collection<Checkpoint> clearCheckpointsCache( String threadId ) {
         return List.of();
+    }
+
+    private EncodedState encodeState(Map<String, Object> data) throws IOException {
+        Objects.requireNonNull(data, "data cannot be null");
+
+        if (stateSerializer == null) {
+            return new EncodedState(objectMapper.writeValueAsString(data), null, null);
+        }
+
+        if (stateSerializer instanceof PlainTextStateSerializer<?> ser) {
+            var bytes = ser.writeDataAsString(data).getBytes(StandardCharsets.UTF_8);
+            return new EncodedState(Base64.getEncoder().encodeToString(bytes), stateSerializer.contentType(), StateEncoding.PLAIN_TEXT_UTF8.redisValue);
+        }
+
+        var bytes = stateSerializer.dataToBytes(data);
+        return new EncodedState(Base64.getEncoder().encodeToString(bytes), stateSerializer.contentType(), StateEncoding.SERIALIZER_BYTES.redisValue);
+    }
+
+    private Map<String, Object> decodeState(String statePayload,
+                                            String stateContentType,
+                                            String stateEncodingValue) throws IOException, ClassNotFoundException {
+
+        if (stateSerializer == null) {
+            return decodeLegacyJsonState(statePayload);
+        }
+
+        String resolvedContentType = stateContentType;
+
+        if (resolvedContentType == null || resolvedContentType.isBlank()) {
+            // Backward compatibility with RedisSaver's original JSON state format.
+            try {
+                return decodeLegacyJsonState(statePayload);
+            }
+            catch (IOException ignored) {
+                resolvedContentType = stateSerializer.contentType();
+            }
+        }
+
+        if (!Objects.equals(resolvedContentType, stateSerializer.contentType())) {
+            throw new IllegalStateException(
+                    String.format("Content Type used for stored state '%s' is different from one '%s' used to deserialize it",
+                            resolvedContentType,
+                            stateSerializer.contentType()));
+        }
+
+        var bytes = Base64.getDecoder().decode(statePayload);
+        var stateEncoding = StateEncoding.fromRedisValue(stateEncodingValue);
+
+        if (stateEncoding.isPresent()) {
+            return switch (stateEncoding.get()) {
+                case SERIALIZER_BYTES -> stateSerializer.dataFromBytes(bytes);
+                case PLAIN_TEXT_UTF8 -> decodePlainTextBytes(bytes);
+            };
+        }
+
+        if (stateSerializer instanceof PlainTextStateSerializer<?>) {
+            return decodePlainTextBytes(bytes);
+        }
+
+        return stateSerializer.dataFromBytes(bytes);
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> decodeLegacyJsonState(String statePayload) throws IOException {
+        return objectMapper.readValue(statePayload, Map.class);
+    }
+
+    private Map<String, Object> decodePlainTextBytes(byte[] bytes) throws IOException {
+        if (!(stateSerializer instanceof PlainTextStateSerializer<?> serializer)) {
+            throw new IllegalStateException(
+                    "Stored state was encoded as plain text, but configured stateSerializer is not a PlainTextStateSerializer");
+        }
+        return serializer.readDataFromString(new String(bytes, StandardCharsets.UTF_8));
     }
 
 }
