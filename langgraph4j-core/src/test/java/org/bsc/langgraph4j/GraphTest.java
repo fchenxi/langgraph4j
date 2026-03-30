@@ -719,4 +719,27 @@ public class GraphTest implements LG4JLoggable {
 
     }
 
+    @Test
+    void issue370() {
+
+        final var sourceMap = new LinkedHashMap<String,String>(10);
+        for( int i = 0; i < 10 ; ++i ) {
+            final var key = "key%02d".formatted(i);
+            if( i%3 == 0 ) {
+                sourceMap.put( key, null );
+                continue;
+            }
+            sourceMap.put( key, "value%02d".formatted(i));
+        }
+
+        final var result = sourceMap.entrySet().stream()
+                .filter( e -> e.getKey() != null )
+                .collect( LinkedHashMap::new,
+                        ( map, entry ) ->
+                                map.put( entry.getKey(), entry.getValue() ),
+                        Map::putAll );
+
+        assertEquals(sourceMap,result);
+
+    }
 }
